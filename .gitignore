@@ -1,3 +1,6 @@
+# Node (presentation builder deps)
+node_modules/
+
 # Python
 __pycache__/
 *.py[cod]
