@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# Scratch / temp
+_*.py
+_*.txt
+*.tmp
+
+# OS
+Thumbs.db
+.DS_Store
