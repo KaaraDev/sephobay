@@ -18,7 +18,7 @@ user's star rating for a product. We build it in Python, combining the course te
 combine, and get creative.
 
 **Deliverables:** the `.ipynb` notebook and a 5–10 slide presentation for the fictional board
-(*Vorstand*).
+(*Vorstand*) — both included (`SephoBay_Recommender_v2.ipynb`, `SephoBay_Praesentation.pptx`).
 
 ## 2. The goal (what "good" means)
 
@@ -49,7 +49,8 @@ predictions as accurate as possible.
 - `data/Bewertungsmatrix_SephoBay.csv` — just the pivot of `Ratings`, so we skip it.
 
 **The single most important fact about this data:** it is heavily lopsided —
-**76% of all ratings are 5 stars**, and the mean is 4.6. Low ratings are rare.
+**~75% of all ratings are 5 stars** (74.9% in the training data, 75.8% in the test data), and
+the mean is 4.6. Low ratings are rare.
 
 ## 4. The key insight that shaped everything
 
@@ -88,21 +89,24 @@ Classic CF (similar items/users) run on the backbone's **residuals**. Item-CF he
 user-CF did not (the matrix is too sparse). Kept only as blend candidates.
 
 ### (d) Content-based corrector — *the productive model step*
-Using product features (category, brand, price, ingredients), for a given (user, product) we
-look at how that user rated **similar products** and nudge the prediction accordingly. This
-personalizes even when CF has no co-rating overlap. It clearly **beat the backbone (~0.33)**,
-and it is the "creative" content step the brief asks for (content filtering can't output stars
-directly, so we turn similarity into a star nudge).
+Using product features (category, brand, price, ingredients, **and TF-IDF of the product
+name**), for a given (user, product) we look at how that user rated **similar products** and
+nudge the prediction accordingly. This personalizes even when CF has no co-rating overlap. It
+clearly **beat the backbone (~0.33)**, and it is the "creative" content step the brief asks for
+(content filtering can't output stars directly, so we turn similarity into a star nudge). The
+TF-IDF text features add genuine new signal and improve the continuous model and validation MAE;
+on this particular test sample the rounded test MAE is unchanged at 0.29.
 
 ### (e) The blend
 ```
 final = backbone + a·item_cf + b·user_cf + c·content
 ```
-Weights tuned on validation; the search leaned mostly on content. Reaches **~0.318**.
+Weights tuned on validation; the search leaned almost entirely on **content** (and dropped
+user-CF to zero). Reaches **~0.30–0.32** before rounding.
 
 ### (f) Decision threshold — *the biggest single win*
 Since **we** submit whole-number predictions, **we** choose the rounding rule. Normal rounding
-(at .5) is wrong here: with 76% fives the cost is asymmetric — wrongly dropping a true-5 to 4
+(at .5) is wrong here: with ~75% fives the cost is asymmetric — wrongly dropping a true-5 to 4
 is expensive, and there are far more 5s to lose than lows to catch. So we **tuned the cutoff**:
 round up to 5 whenever the raw score is **≥ 4.3** (not 4.5). This is the correct
 decision-theory response to a lopsided L1 metric — the same "deviate-from-5" decision as (b),
@@ -124,21 +128,41 @@ result generalizes — it is not overfit to one split.
 > by the instructors, so quote this as "≈0.29 on held-out test", not a guaranteed leaderboard
 > number.
 
-## 7. Takeaway
+## 7. How far can it go? (we checked)
+
+We stress-tested the result against **nine model families** — matrix factorization (SVD),
+gradient boosting (incl. quantile loss), neural networks (MLP), clustering / co-clustering, a
+two-stage classifier, and more. **None beat ~0.29**, and an optimal ensemble assigns them ~0
+weight. About **60% of the remaining error is the 4-vs-5 boundary**, which is only ~84%
+predictable (we already reach 83.5%) — the rest is irreducible noise. So **~0.285–0.29 is the
+practical floor**; reaching ~0.20 would require information that is not in the data. Full
+experiment log in [`ANALYSIS.md`](ANALYSIS.md).
+
+## 8. v2 vs v3
+
+| System | random val | per-user val | test MAE |
+|---|---|---|---|
+| **v2** (bias + extensions, this solution) | 0.30 | 0.31 | **0.29** |
+| v3 (course methods only: CF + content) | 0.33 | 0.32 | 0.31 |
+
+## 9. Takeaway
 
 > A regularized bias model gets you most of the way; the remaining gains come from a **soft,
 > personalized content signal** and from **aligning the rounding decision with the lopsided
-> metric** — *not* from trying to hard-classify the rare low ratings.
+> metric** — *not* from trying to hard-classify the rare low ratings, and *not* from more
+> complex models (which we tested and ruled out).
 
 ## Repository contents
 
 | File | Description |
 |---|---|
-| `SephoBay_Recommender_v2.ipynb` | Main solution: regularized bias backbone + extensions + tuned threshold. |
+| `SephoBay_Recommender_v2.ipynb` | Main solution: regularized bias backbone + content (incl. TF-IDF) + blend + tuned threshold. |
 | `SephoBay_Recommender_v3.ipynb` | Course-methods-only variant (CF + content, no bias model) for comparison. |
+| `SephoBay_Praesentation.pptx` | Presentation for the Vorstand (German, 8 slides). |
+| `ANALYSIS.md` | Full dataset analysis & experiment log (all tested-and-rejected approaches, the floor argument). |
 | `SephoBay_Coding_Plan.md` | Design plan behind v2. |
 | `SephoBay_Coding_Plan_CourseBased.md` | Design plan behind v3. |
-| `predictions.csv` | Final integer predictions for the test set. |
+| `predictions.csv` / `predictions_v3.csv` | Final integer test predictions (v2 / v3). |
 | `data/` | Input CSVs. |
 
 ## How to run

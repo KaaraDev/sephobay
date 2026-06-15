@@ -115,7 +115,20 @@ overfitting to a single split.
 | GBM ordinal classifier (median decode) | 0.337 |
 | Co-clustering (k-means user × item block means) | 0.32 – 0.33 |
 | User-cluster mean corrector | 0.34 – 0.35 |
+| Two-stage classifier (stage 1: 5-vs-not-5 → stage 2: predict 1–4) | 0.317 – 0.321 |
+| Neural network (MLP, 2–3 hidden layers, on v2 features) | 0.295 – 0.307 |
 | Any of the above **blended** with v2 | optimizer assigns ~0 weight (no gain) |
+
+Notes on the last two (the most-requested "smarter" architectures):
+- **Two-stage classifier.** Splitting the problem into "is it 5?" then "rank the rest" adds no
+  information — it reorganises the same features and hits the same ceiling. Worse still, the
+  simplified 5-vs-4 variant (0.304) *beat* the full two-stage (0.317), i.e. stage 2's attempt at
+  the rare lows actively hurt (it calls too many true-4s/5s "low"). v2's `score → threshold` is
+  already the well-calibrated version of the 5-vs-not-5 decision.
+- **Neural network.** The best MLP (0.295) was *fed v2's engineered features* and still lost.
+  Embedding-based deep recommenders (NCF / NeuMF) build on matrix factorization, which already
+  scored 0.32; the data (25k ratings) is orders of magnitude too small for deep nets, and the
+  rounding metric erases their fine-grained-accuracy advantage.
 
 ### Course-methods-only system (v3, for comparison)
 | Model | random val | per-user val | test |
@@ -143,9 +156,10 @@ overfitting to a single split.
    catches lows. The *idea* was right; the productive place to make the decision is the rounding
    threshold, not a switch.
 
-4. **More expressive models overfit and wash out.** SVD, GBM, quantile GBM, and clustering all
-   underperformed. Reasons: (a) 25k ratings is sparse for latent factors / deep trees;
-   (b) extra continuous accuracy disappears after rounding. An ensemble discards them.
+4. **More expressive models overfit and wash out.** SVD, GBM, quantile GBM, clustering,
+   two-stage classifiers, and neural networks (MLP) all underperformed. Reasons: (a) 25k ratings
+   is sparse for latent factors / deep trees / embeddings; (b) extra continuous accuracy
+   disappears after rounding. An ensemble discards them all (~0 weight).
 
 5. **Clustering is structurally the wrong tool.** Bias + CF already give per-user/per-item
    parameters — finer than any cluster. Co-clustering is hard-assignment low-rank MF, which
@@ -197,8 +211,10 @@ Since the error lives in the 4-vs-5 boundary, we tested how predictable that bou
 
 Reaching MAE 0.20–0.22 requires **≥90% accuracy** on 4-vs-5; the data caps at **~84%**. The
 remaining ~16% is **irreducible idiosyncratic noise** — a user chose 4 vs 5 for reasons not
-encoded in any feature. When **eight unrelated model families all plateau between 0.29 and
-0.35**, that convergence *is* the noise floor, not a modelling gap.
+encoded in any feature. When **nine unrelated model families** (bias, item/user CF, content,
+matrix factorization, gradient boosting, ordinal classifier, clustering, two-stage classifier,
+neural network) **all plateau between 0.29 and 0.35**, that convergence *is* the noise floor,
+not a modelling gap.
 
 ---
 
