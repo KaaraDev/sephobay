@@ -1,11 +1,16 @@
 # SephoBay — Dataset Analysis & Experiment Log
 
 *Big Data Analytics · Universität Ulm · Group Project*
-**Compiled: 15.06.2026**
+**Compiled: 15.06.2026 · Updated: 02.07.2026 (v4 result, §9)**
 
 A complete record of what we learned about the SephoBay dataset and every model/idea we
 tested — including the ones that **failed**, which are as informative as the ones that worked.
 Companion to [`README.md`](README.md) (project overview) and the two notebooks.
+
+> **Update 02.07.2026:** a stacked multiclass GBM with an L1-optimal decode (**v4**, §9)
+> **beat v2** — test MAE **0.275 vs 0.2895**, confirmed by paired bootstrap and holdout
+> simulations. Sections 4, 5 and 7 below are kept as originally written (they document what
+> we believed and why), with inline corrections pointing to §9 where a claim has been revised.
 
 ---
 
@@ -64,9 +69,11 @@ Implications of the 76%-fives distribution:
 1. **A trivial baseline is already strong.** "Always predict 5" scores **MAE ≈ 0.37**.
 2. **Fine-grained accuracy is mostly irrelevant.** 4.6 and 4.9 both round to 5. The problem is
    not regression accuracy — it is a **decision boundary: when do you deviate from 5?**
-3. **The realistic competitive band is narrow:** ~0.37 (guess 5) down to ~0.29 (our model).
-   Anything dramatically lower (≤0.25) almost certainly indicates a methodology error
-   (continuous MAE, leakage, or scoring a subset).
+3. **The realistic competitive band is narrow:** ~0.37 (guess 5) down to ~0.29 (v2; the final
+   v4 of §9 reaches ~0.275). Note the sampling noise: MAE on ~3,000 test rows has a standard
+   error of ~0.011 (95% band ±0.022), so a true-~0.27 model can legitimately show ~0.25 on a
+   different 10% sample. Only values *well below* that band (≲0.23) are a red flag for
+   methodology errors (continuous MAE, leakage, or scoring a subset).
 
 ---
 
@@ -106,7 +113,7 @@ overfitting to a single split.
 | **+ metric-tuned threshold → final v2** | **0.2895** |
 | + TF-IDF product-name content features | **~0.285** (robust across seeds) |
 
-### New / fancier model families — **all worse**
+### New / fancier model families — **all worse** *(as tested here; the v4 stacking setup in §9 later made the GBM family work)*
 | Family | test MAE |
 |---|---|
 | Funk SVD / matrix factorization (15–50 factors) | 0.315 – 0.320 |
@@ -137,6 +144,11 @@ Notes on the last two (the most-requested "smarter" architectures):
 | Content weighted-mean (creative step) | 0.334 | — | — |
 | Convex blend (final v3) | 0.330 | 0.319 | **0.3126** |
 
+### v4: stacked multiclass GBM + L1-optimal decode (new best, 02.07.2026 — details in §9)
+| Model | OOF estimate | test |
+|---|---|---|
+| Multiclass GBM on OOF-stacked v2 features, expected-cost decode (5-seed ensemble) | 0.2966 | **0.2750** |
+
 ---
 
 ## 5. Key findings
@@ -160,6 +172,10 @@ Notes on the last two (the most-requested "smarter" architectures):
    two-stage classifiers, and neural networks (MLP) all underperformed. Reasons: (a) 25k ratings
    is sparse for latent factors / deep trees / embeddings; (b) extra continuous accuracy
    disappears after rounding. An ensemble discards them all (~0 weight).
+   **Revised 02.07.2026:** this held for every *regression/median-decode* variant, but not for
+   the §9 setup — a multiclass GBM trained on **out-of-fold** v2 features whose output
+   *distribution* is decoded with the L1-optimal integer. The failure of the earlier GBMs was
+   the training/decoding setup, not the model family.
 
 5. **Clustering is structurally the wrong tool.** Bias + CF already give per-user/per-item
    parameters — finer than any cluster. Co-clustering is hard-assignment low-rank MF, which
@@ -192,7 +208,7 @@ Confusion of the final v2 model on the test set (rows = TRUE, columns = PREDICTE
 
 ---
 
-## 7. The ceiling — why ~0.285 is the floor and 0.20 is unreachable
+## 7. The ceiling — why ~0.285 is the floor and 0.20 is unreachable *(revised by §9: the practical floor is ~0.275, not ~0.285; 0.20 remains unreachable)*
 
 Since the error lives in the 4-vs-5 boundary, we tested how predictable that boundary is:
 
@@ -216,20 +232,97 @@ matrix factorization, gradient boosting, ordinal classifier, clustering, two-sta
 neural network) **all plateau between 0.29 and 0.35**, that convergence *is* the noise floor,
 not a modelling gap.
 
+**Revised 02.07.2026 (see §9):** the "~84% cap" was estimated from a classifier trained *only
+on 4-or-5 rows*; a multiclass model trained on all ratings (sharing strength across classes)
+reaches **85.0%** 4-vs-5 accuracy on test, which is exactly the v2→v4 gain
+(0.2895 → 0.2750). The *shape* of the argument stands — per the table above, ~85% accuracy
+corresponds to ~0.27 MAE, and 0.20 would still need ≥90%, which remains out of reach — but
+the practical floor is **~0.275**, not ~0.285.
+
 ---
 
-## 8. Practical conclusions
+## 8. Practical conclusions *(updated 02.07.2026)*
 
-- **Final model:** regularized bias backbone + content corrector + lean blend + metric-tuned
-  threshold → **test MAE ≈ 0.29** (≈0.285 with TF-IDF content features).
-- **It generalises:** random-val 0.303, per-user-val 0.307, test 0.29 all agree.
-- **It beats** the course-only system (0.31) and every "stronger" model family (0.32–0.35).
-- **It is near the information-theoretic floor** for this metric and dataset.
-- **Be skeptical of any reported MAE ≤ 0.25** on this data — it points to continuous (un-rounded)
-  scoring, data leakage, or subset evaluation, not a better model.
+- **Final model (v4, §9):** multiclass GBM on out-of-fold-stacked v2 features + L1-optimal
+  decode → **test MAE 0.275** (OOF estimate 0.297). Previous best (v2): 0.2895.
+- **It generalises:** the v2→v4 gap (~0.015–0.02 MAE) shows up on OOF, on three independent
+  end-to-end holdout simulations, and on the test set; the paired-bootstrap 95% CI of the
+  improvement excludes zero.
+- **v2 remains the best simple/interpretable model** (bias + content + tuned threshold, 0.29)
+  and supplies v4's most important features.
+- **v4 is near the (revised) practical floor** of ~0.275 for this metric and dataset.
+- **Treat reported MAEs with sampling noise in mind:** the SE on a ~3,000-row test sample is
+  ~0.011, so scores down to ~0.25 are compatible with a true-~0.27 model plus sample luck.
+  Values well below that (≲0.23) warrant a methodology check first (un-rounded scoring, data
+  leakage, subset evaluation) — though our own floor estimate has been revised downward once
+  already (§9), so skepticism should cut both ways.
 
 ### Reproducibility
 ```bash
 pip install numpy pandas scikit-learn
 jupyter notebook SephoBay_Recommender_v2.ipynb   # Run All → regenerates predictions.csv + MAE
+python SephoBay_Recommender_v4_gbm.py            # regenerates predictions_v4.csv + MAE (~20 s)
 ```
+
+---
+
+## 9. Update 02.07.2026 — v4: stacked multiclass GBM + L1-optimal decode beats v2
+
+### The method
+
+v2 produces **one continuous score** per (user, item) and converts it to stars with **one
+global set of cut points**. v4 keeps all of v2's signals but treats the metric fully
+decision-theoretically:
+
+1. **Out-of-fold (OOF) feature stacking.** v2's components — bias backbone, item-CF /
+   user-CF / content residual correctors (incl. TF-IDF) — are computed for **all 24,892
+   training ratings** via 5-fold CV: each rating's features come from models fitted without
+   it. This gives the meta-model 8× more honest training data than v2's single 3,733-row
+   validation split, with no leakage. Added features: user/item mean, std, log-count,
+   share-of-5s, share-of-≤3s.
+2. **Multiclass probability model.** A `HistGradientBoostingClassifier`
+   (300 iter, lr 0.06, depth 4, ℓ2 1.0; config chosen on OOF only) outputs a full
+   distribution **P(rating = 1…5 | features)**; five seeds are probability-averaged.
+3. **Expected-cost decode.** Each pair gets the integer k minimizing **Σⱼ P(j)·|k−j|** —
+   the exact MAE-optimal decision (the distribution's median). This is a *per-row adaptive
+   threshold*; v2's global 4.3 cut is the special case where the distribution only depends
+   on the blend score.
+
+### Results & verification (all done before trusting the number)
+
+| Check | Result |
+|---|---|
+| Test MAE (5-seed ensemble) | **0.2750** vs v2's 0.2895 |
+| Single-seed test MAE (5 seeds) | 0.2711 – 0.2767 (all < 0.2895) |
+| Hyperparameter sensitivity (6 configs) | 0.2711 – 0.2783 (all < 0.2895) |
+| OOF estimate (tuning signal, never saw test) | 0.2966 vs v2-pipeline OOF 0.3031 |
+| Paired bootstrap 95% CI of test improvement | [+0.003, +0.030] — excludes zero |
+| End-to-end holdout simulations (3 fresh seeds, test untouched) | v4 wins all three by 0.016–0.023 |
+| 4-vs-5 accuracy on test | 82.8% (v2) → **85.0%** (v4) |
+
+The gain is exactly where §6 located the error: v4 stops demoting true 5s to 4
+(195 → 149 such errors) while keeping true-4 accuracy (250 → 256 correct). Permutation
+importance: the user's share-of-5s, the content residual, and the user's rating std carry the
+model — the GBM carves nonlinear regions ("picky user × weak item") that a linear blend with
+a global cut cannot express.
+
+### Why the earlier GBM attempts (§4: 0.328–0.337) failed where v4 works
+
+- They regressed the rating (or median-decoded an ordinal model) and rounded — throwing away
+  the distribution that makes per-row optimal decisions possible.
+- They trained on a single split with in-sample component features, so the meta-model saw
+  optimistic, partially overfit inputs and had only ~3.7k honest rows for tuning.
+- The 4-vs-5 "ceiling" experiment conditioned on 4-or-5 rows only; the multiclass model
+  learns the boundary jointly with the low classes and lands above that estimate.
+
+### Caveat for the hidden eval set
+
+Every model scores better on this particular test sample than on validation (v2: 0.302 val →
+0.290 test; v4: 0.297 OOF → 0.275 test). The defensible claim is therefore **"v4 is
+~0.015–0.02 MAE better than v2 on every evaluation we ran"**, not "v4 scores 0.275"
+on the instructors' secret set.
+
+### Reproducibility
+`SephoBay_Recommender_v4_gbm.py` (also as notebook `SephoBay_Recommender_v4.ipynb`) is
+self-contained: builds OOF features, prints the OOF estimate, writes `predictions_v4.csv`,
+and prints the test MAE. Runtime ~20 s.

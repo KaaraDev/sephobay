@@ -2,10 +2,14 @@
 
 *Big Data Analytics – Methoden und Anwendungen · Group Project · Universität Ulm*
 
-**Last updated: 15.06.2026**
+**Last updated: 02.07.2026**
 
 A recommender system that predicts how a user would rate a SephoBay product, optimized for
 the competition metric: **Mean Absolute Error (MAE) in stars, after rounding to whole stars.**
+
+> **Update 02.07.2026 — new best model (v4):** a multiclass GBM stacked on v2's signals with
+> an MAE-optimal per-row decode reaches **test MAE 0.275** (v2: 0.29). See §5g and
+> [`ANALYSIS.md`](ANALYSIS.md) §9 for the verification.
 
 ---
 
@@ -104,13 +108,33 @@ final = backbone + a·item_cf + b·user_cf + c·content
 Weights tuned on validation; the search leaned almost entirely on **content** (and dropped
 user-CF to zero). Reaches **~0.30–0.32** before rounding.
 
-### (f) Decision threshold — *the biggest single win*
+### (f) Decision threshold — *the biggest single win (within v2)*
 Since **we** submit whole-number predictions, **we** choose the rounding rule. Normal rounding
 (at .5) is wrong here: with ~75% fives the cost is asymmetric — wrongly dropping a true-5 to 4
 is expensive, and there are far more 5s to lose than lows to catch. So we **tuned the cutoff**:
 round up to 5 whenever the raw score is **≥ 4.3** (not 4.5). This is the correct
 decision-theory response to a lopsided L1 metric — the same "deviate-from-5" decision as (b),
 but made where it actually pays off. It dropped test MAE from **0.305 → 0.29**.
+
+### (g) v4 — stacked multiclass GBM + MAE-optimal decode *(the new best model, 02.07.2026)*
+
+v4 takes (f)'s idea to its logical conclusion: instead of **one** continuous score cut by
+**one** global threshold, it predicts a full probability distribution and makes the optimal
+decision **per row**:
+
+1. v2's components (backbone, item-CF, user-CF, content residuals) are computed **out-of-fold**
+   for all ~24.9k training ratings (5-fold CV → no rating sees its own model), plus user/item
+   statistics (share of 5s, rating std, counts).
+2. A multiclass gradient-boosted classifier learns **P(rating = 1…5)** from these features
+   (5-seed probability ensemble).
+3. Each test pair gets the integer minimizing the **expected error** Σ P(j)·|k−j| — a per-row
+   adaptive threshold ("picky user × weak item" rounds down; a loyal 5-star user doesn't).
+
+Result: **test MAE 0.275** vs v2's 0.2895. The gain is exactly the 4-vs-5 boundary (accuracy
+82.8% → 85.0%). Verified with paired bootstrap (95% CI of the improvement excludes zero) and
+three end-to-end holdout simulations that never touch the test set (v4 wins all three).
+Earlier GBM attempts failed (0.33+) because they regressed-then-rounded on a single split;
+the OOF stacking + distribution + optimal decode is what makes the family work.
 
 ## 6. Results
 
@@ -119,56 +143,65 @@ but made where it actually pays off. It dropped test MAE from **0.305 → 0.29**
 | Always predict 5 (baseline) | 0.371 |
 | Regularized bias backbone | 0.325 |
 | + content + blend | 0.305 |
-| **+ tuned threshold (final)** | **0.29** |
+| + tuned threshold (v2 final) | 0.29 |
+| **v4: stacked GBM + optimal decode (final)** | **0.275** |
 
-Validation (0.303), per-user validation (0.307), and held-out test (0.29) all agree, so the
-result generalizes — it is not overfit to one split.
+The results generalize: for v2, validation (0.303), per-user validation (0.307) and test
+(0.29) agree; for v4, the OOF estimate (0.297), three holdout simulations, and test (0.275)
+all show the same ~0.015–0.02 advantage over v2.
 
-> **Note:** 0.29 is measured on the *student* test set. The graded evaluation set is held back
-> by the instructors, so quote this as "≈0.29 on held-out test", not a guaranteed leaderboard
-> number.
+> **Note:** these numbers are measured on the *student* test set. The graded evaluation set is
+> held back by the instructors, and every model scores somewhat better on this test sample
+> than on validation — so quote the *gap* ("v4 ≈ 0.015–0.02 better than v2"), not 0.275, as
+> the guaranteed part.
 
-## 7. How far can it go? (we checked)
+## 7. How far can it go? (we checked — then revised once)
 
-We stress-tested the result against **nine model families** — matrix factorization (SVD),
-gradient boosting (incl. quantile loss), neural networks (MLP), clustering / co-clustering, a
-two-stage classifier, and more. **None beat ~0.29**, and an optimal ensemble assigns them ~0
-weight. About **60% of the remaining error is the 4-vs-5 boundary**, which is only ~84%
-predictable (we already reach 83.5%) — the rest is irreducible noise. So **~0.285–0.29 is the
-practical floor**; reaching ~0.20 would require information that is not in the data. Full
-experiment log in [`ANALYSIS.md`](ANALYSIS.md).
+We stress-tested v2 against **nine model families** — matrix factorization (SVD), gradient
+boosting (incl. quantile loss), neural networks (MLP), clustering / co-clustering, a two-stage
+classifier, and more. In their original regress-then-round form, **none beat ~0.29**. The one
+that eventually did (v4) changed the *setup*, not the family: out-of-fold feature stacking +
+full probability distribution + per-row optimal decode. About **60% of v2's remaining error
+was the 4-vs-5 boundary**; v4 pushes that boundary's accuracy from 82.8% to 85.0%, close to
+what the data supports. **~0.275 is the practical floor**; reaching ~0.20 would require
+information that is not in the data. Full experiment log in [`ANALYSIS.md`](ANALYSIS.md)
+(the v4 verification is §9).
 
-## 8. v2 vs v3
+## 8. v2 vs v3 vs v4
 
-| System | random val | per-user val | test MAE |
+| System | random val / OOF | per-user val | test MAE |
 |---|---|---|---|
-| **v2** (bias + extensions, this solution) | 0.30 | 0.31 | **0.29** |
+| **v4** (stacked GBM + optimal decode, final) | 0.297 (OOF) | — | **0.275** |
+| v2 (bias + extensions) | 0.30 | 0.31 | 0.29 |
 | v3 (course methods only: CF + content) | 0.33 | 0.32 | 0.31 |
 
 ## 9. Takeaway
 
-> A regularized bias model gets you most of the way; the remaining gains come from a **soft,
-> personalized content signal** and from **aligning the rounding decision with the lopsided
-> metric** — *not* from trying to hard-classify the rare low ratings, and *not* from more
-> complex models (which we tested and ruled out).
+> A regularized bias model gets you most of the way; a **soft, personalized content signal**
+> and **aligning the rounding decision with the lopsided metric** get you to 0.29 (v2). The
+> last step (v4, 0.275) comes from making that decision **per row instead of globally**:
+> predict a full rating distribution and pick the star with minimal expected error. Hard
+> low-rating classifiers and regress-then-round complex models remain dead ends — we tested
+> and ruled them out.
 
 ## Repository contents
 
 | File | Description |
 |---|---|
-| `SephoBay_Recommender_v2.ipynb` | Main solution: regularized bias backbone + content (incl. TF-IDF) + blend + tuned threshold. |
+| `SephoBay_Recommender_v4_gbm.py` / `SephoBay_Recommender_v4.ipynb` | **Final solution (v4)**: multiclass GBM on OOF-stacked v2 features + MAE-optimal decode. |
+| `SephoBay_Recommender_v2.ipynb` | v2: regularized bias backbone + content (incl. TF-IDF) + blend + tuned threshold. Supplies v4's features. |
 | `SephoBay_Recommender_v3.ipynb` | Course-methods-only variant (CF + content, no bias model) for comparison. |
 | `SephoBay_Praesentation.pptx` | Presentation for the Vorstand (German, 8 slides). |
-| `ANALYSIS.md` | Full dataset analysis & experiment log (all tested-and-rejected approaches, the floor argument). |
+| `ANALYSIS.md` | Full dataset analysis & experiment log (all tested-and-rejected approaches, the floor argument, v4 verification in §9). |
 | `SephoBay_Coding_Plan.md` | Design plan behind v2. |
 | `SephoBay_Coding_Plan_CourseBased.md` | Design plan behind v3. |
-| `predictions.csv` / `predictions_v3.csv` | Final integer test predictions (v2 / v3). |
+| `predictions.csv` / `predictions_v3.csv` / `predictions_v4.csv` | Final integer test predictions (v2 / v3 / v4). |
 | `data/` | Input CSVs. |
 
 ## How to run
 
 ```bash
 pip install numpy pandas scikit-learn
-jupyter notebook SephoBay_Recommender_v2.ipynb   # Run All
+python SephoBay_Recommender_v4_gbm.py            # final model → predictions_v4.csv + MAE (~20 s)
+jupyter notebook SephoBay_Recommender_v2.ipynb   # v2: Run All → predictions.csv + MAE
 ```
-Running the notebook regenerates `predictions.csv` and prints the validation and test MAE.
