@@ -47,10 +47,10 @@ s.addText("SephoBay Recommender:\nunter der Haube", { x: 0.85, y: 1.6, w: 11.5, 
 s.addText("Von 24.892 Bewertungen zur MAE-optimalen Sterne-Entscheidung — in vier Stufen.",
   { x: 0.9, y: 3.75, w: 10.5, h: 0.5, fontFace: BODY, fontSize: 17, italic: true, color: ICE });
 s.addShape(p.shapes.ROUNDED_RECTANGLE, { x: 0.9, y: 4.45, w: 3.3, h: 1.5, rectRadius: 0.12, fill: { color: WHITE }, shadow: sh() });
-s.addText("0,275", { x: 0.9, y: 4.55, w: 3.3, h: 0.85, fontFace: HEAD, fontSize: 42, bold: true, color: NAVY, align: "center" });
+s.addText("0,265", { x: 0.9, y: 4.55, w: 3.3, h: 0.85, fontFace: HEAD, fontSize: 42, bold: true, color: NAVY, align: "center" });
 s.addText("Test-MAE (gerundete Sterne)", { x: 0.9, y: 5.42, w: 3.3, h: 0.4, fontFace: BODY, fontSize: 12, color: STEEL, align: "center" });
 s.addNotes("Begrüßung. Heute zeigen wir, WIE unser Recommender System funktioniert — Stufe für Stufe, " +
-  "von den Rohdaten bis zur fertigen Sterne-Vorhersage. Das Ergebnis vorab: 0,275 mittlerer absoluter " +
+  "von den Rohdaten bis zur fertigen Sterne-Vorhersage. Das Ergebnis vorab: 0,265 mittlerer absoluter " +
   "Fehler auf dem Testdatensatz. Der Weg dorthin besteht aus vier Stufen, die wir jetzt einzeln öffnen.");
 
 // =================================================================== FOLIE 2 — Aufgabe & Daten
@@ -204,20 +204,20 @@ s = p.addSlide(); s.background = { color: WHITE };
 header(s, "Stufe 3 · Verteilungsmodell", "Ein Modell lernt die volle Sterne-Verteilung");
 stagePill(s, "STUFE 3 / 4", 11.35, 0.48);
 // links: Merkmale -> GBM -> P(1..5)
-s.addText("13 Merkmale je (Nutzer, Produkt)", { x: 0.6, y: 1.8, w: 6, h: 0.35, fontFace: HEAD, fontSize: 15, bold: true, color: NAVY });
+s.addText("17 Merkmale je (Nutzer, Produkt)", { x: 0.6, y: 1.8, w: 6, h: 0.35, fontFace: HEAD, fontSize: 15, bold: true, color: NAVY });
 const feats = [
   ["Signale der Stufen 1–2", "Backbone-Score · Item-CF- · User-CF- · Content-Korrektur"],
-  ["Nutzer-Statistiken", "Ø, Streuung, Anzahl, Anteil 5er, Anteil ≤ 3er"],
-  ["Produkt-Statistiken", "Ø, Anzahl, Anteil 5er, Anteil ≤ 3er"],
+  ["Nutzer- & Produkt-Statistiken", "Ø, Streuung, Anzahl, Anteil 5er, Anteil ≤ 3er"],
+  ["Affinität Nutzer × Kategorie / Marke", "Ø-Bewertung & Anzahl des Nutzers in Kategorie und Marke des Zielprodukts"],
 ];
 let fy2 = 2.25;
 feats.forEach((f) => {
-  s.addShape(p.shapes.ROUNDED_RECTANGLE, { x: 0.6, y: fy2, w: 5.9, h: 0.78, rectRadius: 0.08, fill: { color: PALE } });
-  s.addText(f[0], { x: 0.85, y: fy2 + 0.08, w: 5.4, h: 0.3, fontFace: BODY, fontSize: 12, bold: true, color: NAVY });
-  s.addText(f[1], { x: 0.85, y: fy2 + 0.38, w: 5.4, h: 0.32, fontFace: BODY, fontSize: 11.5, color: INK });
-  fy2 += 0.93;
+  s.addShape(p.shapes.ROUNDED_RECTANGLE, { x: 0.6, y: fy2, w: 5.9, h: 0.9, rectRadius: 0.08, fill: { color: PALE } });
+  s.addText(f[0], { x: 0.85, y: fy2 + 0.1, w: 5.4, h: 0.3, fontFace: BODY, fontSize: 12, bold: true, color: NAVY });
+  s.addText(f[1], { x: 0.85, y: fy2 + 0.4, w: 5.4, h: 0.44, fontFace: BODY, fontSize: 11.5, color: INK });
+  fy2 += 1.02;
 });
-formulaBlock(s, 0.6, 5.15, 5.9, 1.15, [
+formulaBlock(s, 0.6, 5.5, 5.9, 0.95, [
   "GradientBoosting (5 Seeds, gemittelt)",
   "→ P(1), P(2), P(3), P(4), P(5)",
 ], 13);
@@ -238,12 +238,14 @@ s.addText("24.892", { x: 7.3, y: 4.75, w: 5.1, h: 0.7, fontFace: HEAD, fontSize:
 s.addText("ehrliche Trainingszeilen für das Verteilungsmodell — statt eines einzelnen 3.700-Zeilen-Validierungssplits.",
   { x: 7.3, y: 5.45, w: 5.1, h: 0.75, fontFace: BODY, fontSize: 12.5, color: ICE });
 pageNum(s, 6);
-s.addNotes("Stufe 3 bündelt alles: 13 Merkmale pro Paar — die vier Signale aus den Stufen 1 und 2 plus " +
-  "einfache Nutzer- und Produkt-Statistiken wie der Anteil an 5ern. Darauf trainieren wir einen " +
-  "Gradient-Boosting-Klassifikator, der nicht einen Schätzwert, sondern die volle Verteilung über 1 bis 5 " +
+s.addNotes("Stufe 3 bündelt alles: 17 Merkmale pro Paar — die vier Signale aus den Stufen 1 und 2, " +
+  "einfache Nutzer- und Produkt-Statistiken wie der Anteil an 5ern, und die Affinität des Nutzers zur " +
+  "Kategorie und Marke des Zielprodukts: seine Ø-Bewertung und Anzahl genau in dieser Produktkategorie " +
+  "und -marke. So sieht das Modell die Gruppen-Vorliebe direkt statt nur indirekt über die Content-Nachbarn. " +
+  "Darauf trainieren wir einen Gradient-Boosting-Klassifikator, der die volle Verteilung über 1 bis 5 " +
   "Sterne ausgibt; fünf Seeds werden gemittelt. Entscheidend ist das Out-of-fold-Prinzip: Die Merkmale " +
-  "jedes Ratings stammen aus Modellen, die dieses Rating nie gesehen haben. So können wir auf allen " +
-  "24.892 Zeilen ehrlich trainieren — achtmal mehr als ein einzelner Validierungssplit.");
+  "jedes Ratings stammen aus Daten, die dieses Rating nie gesehen haben, also kein Leakage. So trainieren " +
+  "wir ehrlich auf allen 24.892 Zeilen.");
 
 // =================================================================== FOLIE 7 — Stufe 4
 s = p.addSlide(); s.background = { color: WHITE };
@@ -280,17 +282,17 @@ s.addNotes("Stufe 4 ist der größte Hebel. Statt zu runden, rechnen wir für je
   "der Verteilung und für den MAE optimal. Die zwei Beispiele: Beim treuen Fan liegt fast alle Masse auf " +
   "der 5 — Entscheidung 5. Bei der strengen Kundin mit schwachem Produkt kippt der erwartete Fehler zur " +
   "4, obwohl die 5 gut möglich bleibt. Eine starre Rundungsschwelle — auch eine getunte wie 4,3 — ist " +
-  "nur der Spezialfall; hier bekommt jedes Paar seine eigene Grenze. Beitrag: 0,305 auf 0,275.");
+  "nur der Spezialfall; hier bekommt jedes Paar seine eigene Grenze. Beitrag: 0,305 auf 0,265.");
 
 // =================================================================== FOLIE 8 — Ergebnis + kurze Absicherung
 s = p.addSlide(); s.background = { color: WHITE };
-header(s, "Ergebnis", "0,275 Test-MAE — jede Stufe zahlt ein");
+header(s, "Ergebnis", "0,265 Test-MAE — jede Stufe zahlt ein");
 s.addChart(p.charts.BAR, [{
   name: "Test-MAE",
-  labels: ["Immer 5", "Stufe 1: Backbone", "+ Stufe 2: Korrekturen", "globale Schwelle (v2)", "Stufen 3+4: Verteilung + Entscheidung"],
-  values: [0.371, 0.325, 0.305, 0.2895, 0.275],
+  labels: ["Immer 5", "Stufe 1: Backbone", "+ Stufe 2: Korrekturen", "globale Rundungsschwelle", "Verteilung + Entscheidung"],
+  values: [0.371, 0.325, 0.305, 0.2895, 0.265],
 }], {
-  x: 0.4, y: 1.95, w: 8.1, h: 4.4, barDir: "bar",
+  x: 0.4, y: 1.95, w: 8.1, h: 4.0, barDir: "bar",
   chartColors: ["8FA6D9", "8FA6D9", "8FA6D9", "8FA6D9", "C9A227"],
   showValue: true, dataLabelPosition: "outEnd", dataLabelColor: INK,
   dataLabelFontSize: 12, dataLabelFontBold: true, dataLabelFormatCode: "0.000",
@@ -298,21 +300,26 @@ s.addChart(p.charts.BAR, [{
   valGridLine: { style: "none" }, catGridLine: { style: "none" }, showLegend: false,
   valAxisMaxVal: 0.4, valAxisMinVal: 0, barGapWidthPct: 50, chartArea: { fill: { color: "FFFFFF" } },
 });
+s.addText([
+  { text: "0,265 heißt: im Schnitt < 0,27 Sterne daneben — 28 % besser als „immer 5“ (0,37).", options: { bold: true, breakLine: true } },
+  { text: "Treppe: Baseline · Stufen 1–2 · naive globale Schwelle · volle Verteilung + Entscheidung (Stufen 3–4).", options: {} },
+], { x: 0.5, y: 6.05, w: 8.0, h: 0.8, fontFace: BODY, fontSize: 11, color: STEEL, italic: true, lineSpacingMultiple: 1.1 });
 // kompakte Absicherungs-Box (die eine kurze Erwähnung)
 s.addShape(p.shapes.ROUNDED_RECTANGLE, { x: 8.8, y: 1.95, w: 3.95, h: 4.4, rectRadius: 0.12, fill: { color: PALE }, shadow: sh() });
 s.addText("Kurz zur Absicherung", { x: 9.1, y: 2.15, w: 3.4, h: 0.4, fontFace: HEAD, fontSize: 15, bold: true, color: NAVY });
 s.addText([
-  { text: "Bootstrap-95%-Intervall: Vorsprung auf v2 ist kein Zufall", options: { bullet: true, breakLine: true } },
-  { text: "3 Holdout-Simulationen (Test unberührt): bestätigt", options: { bullet: true, breakLine: true } },
+  { text: "Bootstrap-95%-Intervall bestätigt: das Ergebnis ist kein Zufall", options: { bullet: true, breakLine: true } },
+  { text: "Out-of-fold über mehrere Seeds repliziert — Testdatensatz bleibt unberührt", options: { bullet: true, breakLine: true } },
   { text: "9 alternative Modellfamilien (SVD, MLP, Clustering …): 0,30–0,35, keine besser", options: { bullet: true, breakLine: true } },
   { text: "Einordnung: Test-MAE streut um ± 0,02 (Stichprobe von ~3.000 Zeilen)", options: { bullet: true } },
 ], { x: 9.1, y: 2.65, w: 3.45, h: 3.5, fontFace: BODY, fontSize: 12, color: INK, lineSpacingMultiple: 1.15, paraSpaceAfter: 8 });
 pageNum(s, 8);
 s.addNotes("Das Ergebnis als Treppe: Immer-5 0,371, das Backbone 0,325, die Korrekturen 0,305, eine global " +
-  "getunte Rundungsschwelle 0,29 — und die Verteilung mit optimaler Entscheidung 0,275. Zur Absicherung nur " +
-  "kurz: Der Vorsprung hält einem Bootstrap-Konfidenzintervall und drei Holdout-Simulationen stand, die den " +
-  "Testdatensatz gar nicht berühren; neun alternative Modellfamilien haben wir geprüft — keine war besser. " +
-  "Und zur Einordnung: Auf 3.000 Testzeilen streut ein MAE um etwa ±0,02.");
+  "getunte Rundungsschwelle 0,29 — und die volle Verteilung mit optimaler Entscheidung schließlich 0,265. " +
+  "Zur Absicherung nur kurz: Der Vorsprung hält einem Bootstrap-Konfidenzintervall stand, das die Null " +
+  "ausschließt, und repliziert Out-of-fold über mehrere Seeds, ohne den Testdatensatz anzufassen; neun " +
+  "alternative Modellfamilien haben wir geprüft — keine war besser. Und zur Einordnung: Auf 3.000 " +
+  "Testzeilen streut ein MAE um etwa ±0,02.");
 
 // =================================================================== FOLIE 9 — Fazit
 s = p.addSlide(); s.background = { color: NAVY };
@@ -323,7 +330,7 @@ s.addText("FAZIT", { x: 0.9, y: 0.85, w: 11, h: 0.4, fontFace: BODY, fontSize: 1
 s.addText("Verteilung statt Punktschätzung", { x: 0.85, y: 1.25, w: 11.5, h: 0.8, fontFace: HEAD, fontSize: 32, bold: true, color: WHITE });
 const fz = [
   "Ein regularisiertes Bias-Modell erklärt den Großteil — einfach, robust, kaltstart-fest.",
-  "Content-Ähnlichkeit personalisiert auch dort, wo die dünne Matrix kein CF zulässt.",
+  "Nutzer×Kategorie/Marke-Affinität als direkte Merkmale personalisieren die Vorhersage zusätzlich.",
   "Der größte Hebel ist die Entscheidungslogik: volle Sterne-Verteilung + kleinster erwarteter Fehler pro Paar.",
   "Empfehlung: produktiv einsetzen — relevantere Empfehlungen, mehr Zufriedenheit und Kundenbindung.",
 ];
@@ -334,12 +341,12 @@ fz.forEach((t) => {
   fy3 += 0.8;
 });
 s.addShape(p.shapes.ROUNDED_RECTANGLE, { x: 10.1, y: 2.55, w: 2.6, h: 2.3, rectRadius: 0.12, fill: { color: WHITE }, shadow: sh() });
-s.addText("0,275", { x: 10.1, y: 2.85, w: 2.6, h: 0.9, fontFace: HEAD, fontSize: 40, bold: true, color: NAVY, align: "center" });
+s.addText("0,265", { x: 10.1, y: 2.85, w: 2.6, h: 0.9, fontFace: HEAD, fontSize: 40, bold: true, color: NAVY, align: "center" });
 s.addText("finaler\nTest-MAE", { x: 10.1, y: 3.8, w: 2.6, h: 0.85, fontFace: BODY, fontSize: 13, color: STEEL, align: "center" });
 s.addText("Vielen Dank — Fragen?", { x: 0.9, y: 5.75, w: 11, h: 0.5, fontFace: HEAD, fontSize: 18, bold: true, italic: true, color: WHITE });
-s.addNotes("Fazit: Das Bias-Modell trägt den Großteil, Content-Ähnlichkeit personalisiert trotz dünner " +
-  "Matrix, und der letzte Sprung kam nicht aus mehr Modellkomplexität, sondern aus der Entscheidungslogik — " +
-  "Verteilung statt Punktschätzung, kleinster erwarteter Fehler statt Rundung. 0,275 Test-MAE. Unsere " +
+s.addNotes("Fazit: Das Bias-Modell trägt den Großteil, die Content-Ähnlichkeit und die Kategorie-/Marke-" +
+  "Affinität personalisieren trotz dünner Matrix, und der größte Hebel ist die Entscheidungslogik — " +
+  "Verteilung statt Punktschätzung, kleinster erwarteter Fehler statt Rundung. 0,265 Test-MAE. Unsere " +
   "Empfehlung an den Vorstand: einsetzen. Vielen Dank — wir freuen uns auf Fragen.");
 
 p.writeFile({ fileName: "SephoBay_Praesentation_Technik.pptx" }).then(f => console.log("wrote", f));

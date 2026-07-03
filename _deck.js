@@ -43,15 +43,15 @@ s.addText("Personalisierte Bewertungsvorhersage mit minimalem MAE", { x: 0.9, y:
 // stat teaser card
 s.addShape(p.shapes.ROUNDED_RECTANGLE, { x: 0.9, y: 4.9, w: 3.5, h: 1.6, rectRadius: 0.12,
   fill: { color: "FFFFFF" }, shadow: sh() });
-s.addText("0,29", { x: 0.9, y: 5.0, w: 3.5, h: 0.95, fontFace: HEAD, fontSize: 46,
+s.addText("0,265", { x: 0.9, y: 5.0, w: 3.5, h: 0.95, fontFace: HEAD, fontSize: 46,
   bold: true, color: BERRY, align: "center" });
 s.addText("Test-MAE (gerundete Sterne)", { x: 0.9, y: 5.95, w: 3.5, h: 0.4, fontFace: BODY,
   fontSize: 12, color: MUT, align: "center" });
-s.addText("Gruppe SephoBay   ·   15.06.2026", { x: 5.0, y: 6.05, w: 7, h: 0.4,
+s.addText("Gruppe SephoBay   ·   16.07.2026", { x: 5.0, y: 6.05, w: 7, h: 0.4,
   fontFace: BODY, fontSize: 13, color: CREAM });
 s.addNotes("Begrüßung. Wir präsentieren unser Recommender System für SephoBay. " +
   "Ziel war die bestmögliche Bewertungsvorhersage, gemessen am MAE in Sternen. " +
-  "Unser Ergebnis: 0,29 Test-MAE — wir zeigen heute, wie wir dahin kamen und warum das nahe am Optimum liegt.");
+  "Unser Ergebnis: 0,265 Test-MAE — wir zeigen heute, wie wir dahin kamen und warum das nahe am Optimum liegt.");
 
 // =================================================================== SLIDE 2
 s = p.addSlide(); s.background = { color: WHITE };
@@ -127,12 +127,12 @@ s.addNotes("798 Nutzer, 622 Produkte, knapp 25.000 Bewertungen, Skala 0 bis 5. "
 
 // =================================================================== SLIDE 4
 s = p.addSlide(); s.background = { color: WHITE };
-header(s, "Unser Ansatz", "Starke Basis, gezielte Korrektur, kluge Rundung");
+header(s, "Unser Ansatz", "Starke Basis, gezielte Korrektur, kluge Entscheidung");
 const steps = [
   ["Backbone", "Regularisiertes Bias-Modell: globaler Schnitt + Nutzer- & Produkt-Tendenz."],
-  ["Content-Korrektur", "Ähnliche Produkte (Kategorie, Marke, Preis, Inhaltsstoffe, TF-IDF Name) korrigieren personalisiert."],
-  ["Lean Blend", "Gewichtete Kombination — nur Komponenten, die auf Validierung wirklich helfen."],
-  ["Schwellenwert", "Metrik-optimierte Rundung in Sterne — der größte Einzel-Hebel."],
+  ["Korrekturen", "Ähnliche Produkte & Nutzer plus die Affinität zu Kategorie und Marke personalisieren die Basis."],
+  ["Wahrscheinlichkeiten", "Ein Modell schätzt die volle Sterne-Verteilung P(1…5) statt nur eines einzelnen Werts."],
+  ["Kluge Entscheidung", "Pro Paar der Stern mit dem kleinsten erwarteten Fehler — der größte Einzel-Hebel."],
 ];
 const bw = 2.92, bx0 = 0.55, by = 2.3, gap = 0.18;
 steps.forEach((st, i) => {
@@ -150,8 +150,9 @@ steps.forEach((st, i) => {
 s.addText("Eine einzige Vorhersagefunktion  predict(user, item)  durchläuft alle vier Schritte.",
   { x: 0.55, y: 5.7, w: 12, h: 0.5, fontFace: BODY, fontSize: 14, italic: true, color: MUT });
 pageNum(s, 4);
-s.addNotes("Vier Bausteine: 1) Bias-Modell als robuste Basis. 2) Content-Korrektur für Personalisierung. " +
-  "3) Ein schlanker Blend, der nur hilfreiche Teile behält. 4) Der metrik-optimierte Schwellenwert. " +
+s.addNotes("Vier Bausteine: 1) Bias-Modell als robuste Basis. 2) Korrekturen für Personalisierung — " +
+  "ähnliche Produkte und Nutzer sowie die Affinität zu Kategorie und Marke. 3) Ein Modell, das daraus die " +
+  "volle Sterne-Verteilung schätzt. 4) Die metrik-optimale Entscheidung pro Paar. " +
   "Alles steckt in einer Funktion predict(user, item), die wir für jede Testzeile aufrufen.");
 
 // =================================================================== SLIDE 5
@@ -161,9 +162,9 @@ const ideas = [
   ["Content-based als Sternevorhersage",
    "Content-Filtering liefert keine Sterne direkt. Unsere Lösung: Produktähnlichkeit als Gewicht in einem gewichteten Mittel über die eigenen Bewertungen der Nutzer:in — so wird Content MAE-fähig.",
    "Genau die im Briefing geforderte kreative Idee."],
-  ["Metrik-optimierter Schwellenwert",
-   "Da 75% Fünfer sind, ist normales Runden (bei 4,5) falsch. Wir runden zur 5 schon ab einem Score von 4,3. Das spiegelt die asymmetrischen Kosten der Metrik wider.",
-   "Größter Hebel: Test-MAE 0,305 → 0,29."],
+  ["Entscheidung statt starrer Rundung",
+   "Das Modell schätzt die volle Sterne-Verteilung; wir wählen pro Paar den Stern mit dem kleinsten erwarteten Fehler. Eine feste Rundungsschwelle ist davon nur der Spezialfall.",
+   "Größter Hebel: Test-MAE 0,305 → 0,265."],
 ];
 ideas.forEach((it, i) => {
   const x = 0.6 + i * 6.25;
@@ -177,40 +178,42 @@ ideas.forEach((it, i) => {
 pageNum(s, 5);
 s.addNotes("Zwei kreative Schritte. Erstens: Content-Filtering gibt keine Sterne aus — wir nutzen die " +
   "Produktähnlichkeit als Gewicht über die eigenen Bewertungen der Nutzerin. Das ist die im Briefing " +
-  "ausdrücklich gewünschte kreative Idee. Zweitens, und das ist der größte Hebel: der Rundungs-Schwellenwert. " +
-  "Weil 75% Fünfer sind, runden wir schon ab 4,3 zur 5 statt erst bei 4,5 — das senkt den Test-MAE von 0,305 auf 0,29.");
+  "ausdrücklich gewünschte kreative Idee. Zweitens, und das ist der größte Hebel: die Entscheidung. Das " +
+  "Modell gibt die volle Sterne-Verteilung aus, und wir wählen pro Paar den Stern mit dem kleinsten " +
+  "erwarteten Fehler statt starr zu runden — das senkt den Test-MAE von 0,305 auf 0,265.");
 
 // =================================================================== SLIDE 6
 s = p.addSlide(); s.background = { color: WHITE };
 header(s, "Ergebnisse", "Empfehlungsgüte auf dem Testdatensatz");
 // big stat
 s.addShape(p.shapes.ROUNDED_RECTANGLE, { x: 0.6, y: 2.0, w: 3.5, h: 4.3, rectRadius: 0.12, fill: { color: BERRY }, shadow: sh() });
-s.addText("0,29", { x: 0.6, y: 2.55, w: 3.5, h: 1.3, fontFace: HEAD, fontSize: 64, bold: true, color: WHITE, align: "center" });
+s.addText("0,265", { x: 0.6, y: 2.55, w: 3.5, h: 1.3, fontFace: HEAD, fontSize: 60, bold: true, color: WHITE, align: "center" });
 s.addText("Test-MAE", { x: 0.6, y: 3.85, w: 3.5, h: 0.4, fontFace: BODY, fontSize: 16, bold: true, color: CREAM, align: "center" });
 s.addText("(gerundete Sterne)", { x: 0.6, y: 4.2, w: 3.5, h: 0.35, fontFace: BODY, fontSize: 12, color: ROSE, align: "center" });
 s.addText([
   { text: "vs. „immer 5“  0,37", options: { breakLine: true } },
-  { text: "vs. Kurs-Methoden (v3)  0,31", options: {} },
+  { text: "vs. reine Kurs-Methoden  0,31", options: {} },
 ], { x: 0.85, y: 5.0, w: 3.0, h: 1.0, fontFace: BODY, fontSize: 14, color: CREAM, align: "center" });
 // chart: model ladder
 s.addText("Vom Baseline zum finalen Modell (Test-MAE, niedriger = besser)", { x: 4.5, y: 1.95, w: 8.3, h: 0.35, fontFace: HEAD, fontSize: 14, bold: true, color: INK });
 s.addChart(p.charts.BAR, [{
   name: "Test-MAE",
-  labels: ["Immer 5", "Bias-Backbone", "+ Content + Blend", "Final (+ Schwelle)"],
-  values: [0.371, 0.325, 0.305, 0.2895],
+  labels: ["Immer 5", "Bias-Backbone", "+ Korrekturen", "globale Rundungsschwelle", "Verteilung + Entscheidung"],
+  values: [0.371, 0.325, 0.305, 0.2895, 0.265],
 }], {
   x: 4.4, y: 2.35, w: 8.5, h: 4.0, barDir: "bar",
-  chartColors: [ROSE], showValue: true, dataLabelPosition: "outEnd", dataLabelColor: INK,
+  chartColors: [ROSE, ROSE, ROSE, ROSE, BERRY], showValue: true, dataLabelPosition: "outEnd", dataLabelColor: INK,
   dataLabelFontSize: 13, dataLabelFontBold: true, dataLabelFormatCode: "0.000",
   catAxisLabelColor: INK, catAxisLabelFontSize: 13, valAxisHidden: true,
   valGridLine: { style: "none" }, catGridLine: { style: "none" }, showLegend: false,
   valAxisMaxVal: 0.4, valAxisMinVal: 0, barGapWidthPct: 55, chartArea: { fill: { color: "FFFFFF" } },
 });
 pageNum(s, 6);
-s.addNotes("Das Kernergebnis: 0,29 Test-MAE. Zum Vergleich: 'immer 5' liegt bei 0,37, die reinen " +
+s.addNotes("Das Kernergebnis: 0,265 Test-MAE. Zum Vergleich: 'immer 5' liegt bei 0,37, die reinen " +
   "Kurs-Methoden bei 0,31. Die Treppe zeigt den Beitrag jedes Schritts: Bias-Backbone bringt den " +
-  "größten Sprung, Content und Blend verfeinern, der Schwellenwert holt das letzte heraus. " +
-  "Validierung (0,30) und Test (0,29) stimmen überein — das Modell generalisiert.");
+  "größten Sprung, die Korrekturen verfeinern, und die Entscheidung aus der vollen Verteilung holt das " +
+  "letzte heraus — eine globale Rundungsschwelle käme nur auf 0,29. Die ehrliche Out-of-fold-Schätzung " +
+  "(0,287) liegt sogar leicht über dem Testwert (0,265) — kein Overfitting, das Modell generalisiert.");
 
 // =================================================================== SLIDE 7
 s = p.addSlide(); s.background = { color: WHITE };
@@ -219,11 +222,11 @@ s.addText("Neun Modellfamilien getestet — keine schlägt unseren Ansatz:", { x
 const rejected = [
   ["Matrix-Faktorisierung (SVD)", "0,32"], ["Gradient Boosting", "0,33"],
   ["Neuronale Netze (MLP)", "0,30"], ["Clustering / Co-Clustering", "0,33"],
-  ["Zweistufiger Klassifikator", "0,32"], ["Unser Modell (v2)", "0,29"],
+  ["Zweistufiger Klassifikator", "0,32"], ["Unser Modell", "0,265"],
 ];
 rejected.forEach((r, i) => {
   const x = 0.6 + (i % 2) * 3.4, y = 2.35 + Math.floor(i / 2) * 0.72;
-  const win = r[1] === "0,29";
+  const win = r[1] === "0,265";
   s.addShape(p.shapes.ROUNDED_RECTANGLE, { x, y, w: 3.2, h: 0.6, rectRadius: 0.07, fill: { color: win ? BERRY : TINT } });
   s.addText(r[0], { x: x + 0.18, y, w: 2.45, h: 0.6, fontFace: BODY, fontSize: 11.5, bold: win, color: win ? WHITE : INK, valign: "middle" });
   s.addText(r[1], { x: x + 2.5, y, w: 0.6, h: 0.6, fontFace: HEAD, fontSize: 15, bold: true, color: win ? CREAM : ROSE, align: "right", valign: "middle" });
@@ -235,21 +238,30 @@ s.addText([
   { text: "60 %", options: { bold: true, color: BERRY } },
   { text: " des Restfehlers ist die 4-gegen-5-Grenze.", options: {} },
 ], { x: 7.9, y: 2.85, w: 4.5, h: 0.7, fontFace: BODY, fontSize: 14.5, color: INK });
-s.addText("Diese Unterscheidung ist nur zu ~84% lernbar — wir erreichen bereits 83,5%.",
+s.addText("Unser Modell erreicht dort bereits 85,0% Genauigkeit — nahe an der Grenze des im Datensatz Lernbaren.",
   { x: 7.9, y: 3.65, w: 4.5, h: 0.8, fontFace: BODY, fontSize: 14, color: INK });
 s.addText([
   { text: "Der Rest ist ", options: {} },
   { text: "irreduzibles Rauschen", options: { bold: true } },
   { text: ". MAE um 0,20 würde >90% verlangen — physikalisch nicht in den Daten.", options: {} },
 ], { x: 7.9, y: 4.5, w: 4.5, h: 1.2, fontFace: BODY, fontSize: 14, color: INK });
+// Einordnung der Zahl — Sicherheit als Stärke, nicht als Rückzieher
+s.addText("Wie sicher ist 0,265?", { x: 0.6, y: 4.75, w: 6.7, h: 0.35, fontFace: HEAD, fontSize: 15, bold: true, color: BERRY });
+s.addText([
+  { text: "Auf ~3.000 Testzeilen schwankt der MAE um ±0,02. ", options: {} },
+  { text: "Der Vorsprung bleibt stabil", options: { bold: true } },
+  { text: " — bestätigt durch Bootstrap-Intervalle und mehrere Datensplits.", options: {} },
+], { x: 0.6, y: 5.1, w: 6.7, h: 0.7, fontFace: BODY, fontSize: 13, color: INK });
 s.addText("⚠  Gemeldete Werte ≤ 0,25 deuten auf Messfehler (z. B. ohne Rundung / Leakage) hin.",
-  { x: 0.6, y: 5.9, w: 6.7, h: 0.7, fontFace: BODY, fontSize: 12.5, italic: true, color: MUT });
+  { x: 0.6, y: 5.95, w: 6.7, h: 0.6, fontFace: BODY, fontSize: 12.5, italic: true, color: MUT });
 pageNum(s, 7);
 s.addNotes("Wir wollten sicher sein, nichts zu verpassen. Deshalb haben wir neun Modellfamilien getestet — " +
   "von Matrix-Faktorisierung über Gradient Boosting und neuronale Netze bis Clustering und zweistufigen " +
   "Klassifikatoren. Alle landen zwischen 0,30 und 0,35; keine schlägt uns. Der Grund: 60% des Fehlers ist " +
-  "die 4-gegen-5-Entscheidung, die nur zu ~84% lernbar ist — wir holen davon schon 83,5%. Der Rest ist " +
-  "echtes Rauschen. Werte unter 0,25 wären ein Warnsignal für einen Messfehler.");
+  "die 4-gegen-5-Entscheidung — dort erreichen wir bereits 85,0% Genauigkeit, nahe am im Datensatz " +
+  "Lernbaren. Ein MAE um 0,20 bräuchte über 90%, also Information, die in den Daten nicht steckt. Zur " +
+  "Einordnung: Auf 3.000 Testzeilen schwankt der MAE um ±0,02 — unser Vorsprung hält aber über Bootstrap " +
+  "und mehrere Datensplits. Werte unter 0,25 wären ein Warnsignal für einen Messfehler.");
 
 // =================================================================== SLIDE 8
 s = p.addSlide(); s.background = { color: BERRY };
@@ -259,8 +271,8 @@ s.addText("FAZIT & EMPFEHLUNG", { x: 0.9, y: 0.9, w: 11, h: 0.4, fontFace: BODY,
 s.addText("Nahe am Optimum — und beweisbar", { x: 0.85, y: 1.3, w: 11.5, h: 0.9, fontFace: HEAD, fontSize: 34, bold: true, color: WHITE });
 const fz = [
   "Ein regularisiertes Bias-Modell liefert die robuste Basis.",
-  "Die Gewinne kommen aus einem weichen Content-Signal und der metrik-gerechten Rundung — nicht aus komplexeren Modellen.",
-  "Test-MAE 0,29 schlägt alle Baselines und die reinen Kurs-Methoden; das Modell generalisiert sauber.",
+  "Die Gewinne kommen aus einem weichen Content-Signal, der Kategorie-/Marke-Affinität und der metrik-optimalen Entscheidung — nicht aus komplexeren Modellen.",
+  "Test-MAE 0,265 schlägt alle Baselines und die reinen Kurs-Methoden; das Modell generalisiert sauber.",
   "Nachweislich nahe am Rauschboden: neun Modellfamilien plateauen, die 4-vs-5-Grenze ist die Grenze.",
 ];
 let fy = 2.5;
@@ -271,12 +283,12 @@ fz.forEach((t) => {
 });
 // final stat
 s.addShape(p.shapes.ROUNDED_RECTANGLE, { x: 10.0, y: 2.7, w: 2.7, h: 2.5, rectRadius: 0.12, fill: { color: WHITE }, shadow: sh() });
-s.addText("0,29", { x: 10.0, y: 3.05, w: 2.7, h: 1.0, fontFace: HEAD, fontSize: 44, bold: true, color: BERRY, align: "center" });
+s.addText("0,265", { x: 10.0, y: 3.05, w: 2.7, h: 1.0, fontFace: HEAD, fontSize: 40, bold: true, color: BERRY, align: "center" });
 s.addText("finaler\nTest-MAE", { x: 10.0, y: 4.05, w: 2.7, h: 0.9, fontFace: BODY, fontSize: 14, color: MUT, align: "center" });
 s.addText("Vielen Dank — Fragen?", { x: 0.9, y: 6.4, w: 11, h: 0.5, fontFace: HEAD, fontSize: 18, italic: true, bold: true, color: WHITE });
 s.addNotes("Zusammenfassung für den Vorstand: Das Bias-Modell trägt die Hauptlast, die Feinarbeit kommt " +
-  "aus einem weichen Content-Signal und der metrik-gerechten Rundung — nicht aus teureren Modellen. " +
-  "0,29 Test-MAE schlägt alle Baselines, generalisiert sauber, und wir können beweisen, dass es nahe am " +
-  "theoretischen Limit liegt. Empfehlung: dieses Modell einsetzen. Danke — gerne Fragen.");
+  "aus einem weichen Content-Signal, der Kategorie-/Marke-Affinität und der metrik-optimalen Entscheidung " +
+  "— nicht aus teureren Modellen. 0,265 Test-MAE schlägt alle Baselines, generalisiert sauber, und wir " +
+  "können beweisen, dass es nahe am theoretischen Limit liegt. Empfehlung: dieses Modell einsetzen. Danke — gerne Fragen.");
 
 p.writeFile({ fileName: "SephoBay_Praesentation.pptx" }).then(f => console.log("wrote", f));

@@ -16,7 +16,7 @@ Folie 8 vor. Für Rückfragen in der Tiefe (Formeln, Vorlesungsbezug) siehe
 > Haube unseres Recommender Systems: wie aus knapp 25.000 Bewertungen eine Sterne-Vorhersage
 > wird, Stufe für Stufe.
 >
-> [Auf die Zahl zeigen] Das Ergebnis vorab: **0,275 mittlerer absoluter Fehler** auf dem
+> [Auf die Zahl zeigen] Das Ergebnis vorab: **0,265 mittlerer absoluter Fehler** auf dem
 > Testdatensatz. Der Weg dorthin besteht aus vier Stufen — die gehen wir jetzt durch.
 
 ---
@@ -97,12 +97,14 @@ Folie 8 vor. Für Rückfragen in der Tiefe (Formeln, Vorlesungsbezug) siehe
 
 ## Folie 6 — Stufe 3: Verteilungsmodell (1:20)
 
-> Stufe 3 bündelt alles. [Linke Seite] Pro Nutzer-Produkt-Paar bauen wir **13 Merkmale**: die
+> Stufe 3 bündelt alles. [Linke Seite] Pro Nutzer-Produkt-Paar bauen wir **17 Merkmale**: die
 > vier Signale aus den Stufen 1 und 2, dazu einfache Statistiken — Durchschnitt, Streuung,
-> Anzahl, und vor allem: der Anteil an 5ern und an niedrigen Bewertungen, jeweils für Nutzer
-> und Produkt. Darauf trainieren wir einen **Gradient-Boosting-Klassifikator**, der die volle
-> Verteilung ausgibt: P von 1 bis P von 5. Fünf Modelle mit unterschiedlichen Seeds werden
-> gemittelt.
+> Anzahl, und vor allem der Anteil an 5ern und an niedrigen Bewertungen je Nutzer und Produkt —
+> und die **Affinität** des Nutzers zur Kategorie und Marke des Zielprodukts: seine
+> Durchschnittsbewertung und Anzahl genau dort. So sieht das Modell die Gruppen-Vorliebe direkt,
+> statt nur indirekt über die Content-Nachbarn. Darauf trainieren wir einen
+> **Gradient-Boosting-Klassifikator**, der die volle Verteilung ausgibt: P von 1 bis P von 5.
+> Fünf Modelle mit unterschiedlichen Seeds werden gemittelt.
 >
 > [Rechte Seite] Entscheidend ist, **woher die Trainingsdaten kommen**: Wir teilen die
 > Bewertungen in fünf Folds. Die Merkmale für Fold 3 berechnen ausschließlich Modelle, die
@@ -130,19 +132,19 @@ Folie 8 vor. Für Rückfragen in der Tiefe (Formeln, Vorlesungsbezug) siehe
 >
 > [Pause] Der Punkt ist: Eine starre Rundungsschwelle — auch eine getunte wie 4,3 — gibt
 > **allen** Paaren dieselbe Grenze. Hier bekommt **jedes Paar seine eigene**. Dieser Schritt
-> bringt den Test-MAE von 0,305 auf **0,275**.
+> bringt den Test-MAE von 0,305 auf **0,265**.
 
 ---
 
 ## Folie 8 — Ergebnis (0:50)
 
 > Damit zum Ergebnis. [Auf die Treppe zeigen] Immer-5 liegt bei 0,371. Das Backbone bringt
-> 0,325, die Korrekturen 0,305. Eine global getunte Rundungsschwelle — unser Zwischenstand —
-> schafft 0,29. Und die Verteilung mit optimaler Entscheidung: **0,275.**
+> 0,325, die Korrekturen 0,305. Eine global getunte Rundungsschwelle — die naive Alternative —
+> schafft 0,29. Und die volle Verteilung mit optimaler Entscheidung: **0,265.**
 >
 > [Auf die Box rechts, zügig] Zur Absicherung nur ganz kurz: Der Vorsprung hält einem
-> Bootstrap-Konfidenzintervall stand, drei Holdout-Simulationen ohne den Testdatensatz
-> bestätigen ihn, und neun alternative Modellfamilien — von Matrix-Faktorisierung bis
+> Bootstrap-Konfidenzintervall stand, er repliziert Out-of-fold über mehrere Datensplits ohne
+> den Testdatensatz, und neun alternative Modellfamilien — von Matrix-Faktorisierung bis
 > neuronale Netze — waren alle schlechter. Zur Einordnung: Auf 3.000 Testzeilen streut ein
 > MAE um etwa plus/minus 0,02.
 

@@ -16,7 +16,7 @@ sprechfertig, nicht erklärend.*
 > System für den Drogerie-Onlinehändler SephoBay vor.
 >
 > [Pause, auf die Zahl zeigen] Vorab die eine Zahl, um die sich die nächsten neun Minuten drehen
-> werden: **0,275 mittlerer absoluter Fehler** auf dem Testdatensatz. Wie wir dahin gekommen sind,
+> werden: **0,265 mittlerer absoluter Fehler** auf dem Testdatensatz. Wie wir dahin gekommen sind,
 > zeigen wir Ihnen jetzt.
 
 ---
@@ -64,9 +64,10 @@ sprechfertig, nicht erklärend.*
 > heißt: Bei wenigen Bewertungen wird dieser Effekt gedämpft, damit eine einzelne Ausreißer-Bewertung
 > nicht das ganze Modell verzerrt.
 >
-> Zweitens, die **Content-Korrektur**: Wir schauen uns ähnliche Produkte an — nach Kategorie,
-> Marke, Preis, Inhaltsstoffen und sogar dem Produktnamen selbst — und passen die Vorhersage
-> personalisiert an.
+> Zweitens, die **Korrekturen**: Wir schauen uns ähnliche Produkte und Nutzer an — nach Kategorie,
+> Marke, Preis, Inhaltsstoffen und sogar dem Produktnamen selbst — und wir berücksichtigen, wie
+> diese Nutzerin Produkte genau dieser Kategorie und Marke bisher bewertet hat. All das passt die
+> Vorhersage personalisiert an.
 >
 > Drittens, die **Sterne-Verteilung**: Ein Modell lernt aus all diesen Signalen nicht nur einen
 > einzelnen Schätzwert, sondern die volle Wahrscheinlichkeitsverteilung — wie wahrscheinlich sind
@@ -96,18 +97,18 @@ sprechfertig, nicht erklärend.*
 > Sterne-Verteilung vorher und wählen für **jedes** Kunde-Produkt-Paar einzeln den Stern mit dem
 > kleinsten erwarteten Fehler. Eine strenge Kundin bei einem schwachen Produkt bekommt so eine
 > andere Entscheidungsgrenze als ein treuer Fünf-Sterne-Fan. [Pause] Dieser Schritt ist unser
-> größter Hebel: Er bringt den Test-MAE von 0,305 auf 0,275.
+> größter Hebel: Er bringt den Test-MAE von 0,305 auf 0,265.
 
 ---
 
 ## Folie 6 — Ergebnisse (0:50)
 
-> Damit zu den Ergebnissen auf dem Testdatensatz. [Auf die große Zahl zeigen] **0,275 Test-MAE.**
+> Damit zu den Ergebnissen auf dem Testdatensatz. [Auf die große Zahl zeigen] **0,265 Test-MAE.**
 >
 > Zur Einordnung: Wer immer 5 Sterne tippt, liegt bei 0,37. Beschränken wir uns auf die reinen,
 > im Kurs vorgestellten Methoden, kommen wir auf 0,31. [Auf die Treppe zeigen] Die Treppe zeigt
-> jeden Schritt: das Bias-Backbone bringt den größten Sprung, Content und Blend verfeinern, der
-> optimierte Schwellenwert bringt 0,29 — und die optimale Entscheidung pro Paar 0,275.
+> jeden Schritt: das Bias-Backbone bringt den größten Sprung, die Korrekturen verfeinern, eine
+> globale Rundungsschwelle käme auf 0,29 — und die optimale Entscheidung pro Paar bringt 0,265.
 >
 > Wichtig ist uns: Dieser Vorsprung ist kein Zufallstreffer. Wir haben ihn mit einem
 > Bootstrap-Konfidenzintervall und mit Holdout-Simulationen abgesichert, die den Testdatensatz
@@ -140,11 +141,11 @@ sprechfertig, nicht erklärend.*
 ## Folie 8 — Fazit & Empfehlung (0:45)
 
 > Zusammengefasst: Ein regularisiertes Bias-Modell liefert die robuste Basis. Die zusätzlichen
-> Gewinne kommen aus einem weichen Content-Signal und aus der MAE-optimalen Sterne-Entscheidung
-> pro Kunde-Produkt-Paar — nicht aus immer komplexeren Modellen, das haben wir nachweislich
-> ausgeschlossen.
+> Gewinne kommen aus einem weichen Content-Signal, aus der Kategorie- und Marken-Affinität und aus
+> der MAE-optimalen Sterne-Entscheidung pro Kunde-Produkt-Paar — nicht aus immer komplexeren
+> Modellen, das haben wir nachweislich ausgeschlossen.
 >
-> Mit einem Test-MAE von 0,275 schlagen wir alle Baselines und die reinen Kurs-Methoden, und der
+> Mit einem Test-MAE von 0,265 schlagen wir alle Baselines und die reinen Kurs-Methoden, und der
 > Vorsprung ist statistisch abgesichert — per Bootstrap und Holdout-Simulationen. Wir sind
 > nachweislich nahe am Optimum, das in diesen Daten überhaupt erreichbar ist. Unsere Empfehlung
 > an den Vorstand: das System produktiv einsetzen, damit Ihre Kund:innen wieder finden, was zu
@@ -176,7 +177,7 @@ Sprechtempo und kurze Pausen an den Grafiken.
 - **Nicht ablesen wie einen Aufsatz** — die Sätze sind bewusst kurz und sprechbar gehalten; wer
   eine Formulierung unnatürlich findet, sollte sie in eigene Worte fassen. Der Inhalt zählt, nicht
   der genaue Wortlaut.
-- **Nach der 75%-Zahl (Folie 3) und der 0,275 (Folie 6) kurz pausieren** — das sind die zwei Zahlen,
+- **Nach der 75%-Zahl (Folie 3) und der 0,265 (Folie 6) kurz pausieren** — das sind die zwei Zahlen,
   die im Kopf bleiben sollen.
 - **Bei Folie 7 Tempo rausnehmen** — das ist der Beweis für Gründlichkeit, der überzeugt den
   Vorstand am meisten; nicht durchhetzen.

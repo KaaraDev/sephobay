@@ -2,8 +2,8 @@
 
 *Begleittext zu `SephoBay_Praesentation.pptx`. Für jedes im Projekt verwendete Konzept wird erklärt,
 **woher es aus Kapitel 2 (Recommender Systeme) kommt**, **wie es in der Vorlesung definiert ist**
-und **wie/wo wir es in `SephoBay_Recommender_v2.ipynb` einsetzen**. Reihenfolge folgt den
-Foliennummern der Präsentation.*
+und **wie/wo wir es in `SephoBay_Recommender_v5.ipynb` (finales Modell) einsetzen**. Reihenfolge
+folgt den Foliennummern der Präsentation.*
 
 ---
 
@@ -251,14 +251,15 @@ mit Sternenprognosen aus CBF gearbeitet wird). Das ist unsere **zweite kreative 
   Damit die Features des Modells „ehrlich" sind, werden die Bausteine per 5-fold CV
   **out-of-fold** für alle ~24.900 Trainings-Bewertungen berechnet (kein Rating sieht sein
   eigenes Modell).
-- Beide Stufen zusammen bringen den größten Sprung: Test-MAE **0,305 → 0,275**.
+- Beide Stufen zusammen bringen den größten Sprung: Test-MAE **0,305 → 0,265**.
 
 ---
 
 ## 5. Zusammenspiel aller Bausteine (unser `predict(u,i)`)
 
 ```
-Features(u,i) = [backbone, item_cf, user_cf, content, Nutzer-/Item-Statistiken]   (out-of-fold)
+Features(u,i) = [backbone, item_cf, user_cf, content, Nutzer-/Item-Statistiken,
+                 Nutzer×Kategorie/Marke-Affinität]                                (out-of-fold)
 P(1..5 | u,i) = GradientBoosting-Klassifikator(Features)                          (5-Seed-Ensemble)
 stars(u,i)    = argmin_k Σ_j P(j)·|k−j|                                           (MAE-optimal)
 ```
@@ -270,15 +271,19 @@ stars(u,i)    = argmin_k Σ_j P(j)·|k−j|                                     
   Sternenprognose übersetzt (die geforderte kreative Lösung).
 - **Statistiken**: Nutzer-/Item-Mittelwert, Streuung, Anzahl, Anteil 5er, Anteil ≤3er — alles
   nur aus dem jeweiligen Trainings-Fold.
+- **Affinität**: die Durchschnittsbewertung und Anzahl des Nutzers innerhalb der **Kategorie**
+  und **Marke** des Zielprodukts — vier direkte Merkmale, die die Gruppen-Vorliebe abbilden, die
+  der Content-Korrektor vorher nur indirekt über seine k=5-Nachbarn sah. Leak-frei aus dem
+  jeweiligen Trainings-Fold; unbekannte (Nutzer, Kategorie) fallen auf den globalen Schnitt zurück.
 - **Verteilung + Entscheidung**: das Multiclass-Modell und der Expected-Cost-Decode aus
   Abschnitt 4 (Endstufe). Fehlt ein Baustein, trägt er 0 bei → automatischer Rückfall auf die
   einfacheren Signale („Konfidenz-Leiter").
 
-Ergebnis: **Test-MAE 0,275** — gegenüber 0,37 für die triviale Baseline „immer 5", 0,31 für die
+Ergebnis: **Test-MAE 0,265** — gegenüber 0,37 für die triviale Baseline „immer 5", 0,31 für die
 Variante, die *ausschließlich* mit den in Kapitel 2 gelehrten Methoden arbeitet
-(`SephoBay_Recommender_v3.ipynb`), und 0,29 für die Vorstufe mit globaler Rundungsschwelle (v2).
-Der Vorsprung ist abgesichert (Bootstrap-Konfidenzintervall, Holdout-Simulationen — Details in
-`ANALYSIS.md` §9; Implementierung in `SephoBay_Recommender_v4.ipynb`).
+(`SephoBay_Recommender_v3.ipynb`), und 0,29 für die Vorstufe mit globaler Rundungsschwelle.
+Der Vorsprung ist abgesichert (Bootstrap-Konfidenzintervall, OOF-Replikation über mehrere
+Datensplits — Details in `ANALYSIS.md` §9; Implementierung in `SephoBay_Recommender_v5.ipynb`).
 
 ---
 
@@ -297,6 +302,7 @@ Der Vorsprung ist abgesichert (Bootstrap-Konfidenzintervall, Holdout-Simulatione
 | Bias-Modell | Backbone: globaler Schnitt + Nutzer-/Item-Tendenz, regularisiert | Erweiterung, nicht aus Kap. 2 |
 | Residual | Differenz zwischen echter Bewertung und Backbone-Prognose | Erweiterung |
 | Schwellenwert-Tuning | MAE-optimale Rundungsschwelle statt Standard-Rundung bei 4,5 | Erweiterung, motiviert durch Aufgabenstellung |
+| Nutzer×Kategorie/Marke-Affinität | Ø-Bewertung & Anzahl des Nutzers in Kategorie/Marke des Zielprodukts (4 direkte Merkmale) | Erweiterung (finales Modell) |
 | Sterne-Verteilung | volle Wahrscheinlichkeitsverteilung P(1–5 Sterne) je Kunde-Produkt-Paar | Erweiterung (finales Modell) |
 | Expected-Cost-Entscheidung | Stern mit kleinstem erwarteten Fehler Σ P(j)·\|k−j\| = Median der Verteilung | Erweiterung (finales Modell) |
 | Out-of-fold (OOF) | Features je Rating von Modellen, die ohne dieses Rating gefittet wurden (5-fold CV) | Erweiterung (finales Modell) |
@@ -306,7 +312,7 @@ Der Vorsprung ist abgesichert (Bootstrap-Konfidenzintervall, Holdout-Simulatione
 
 ## 7. Slide-für-Slide Sprechhinweise
 
-**Folie 1 (Titel):** kurz halten — Team, Titel, die Kernzahl (0,275) direkt vorab zeigen, macht
+**Folie 1 (Titel):** kurz halten — Team, Titel, die Kernzahl (0,265) direkt vorab zeigen, macht
 neugierig.
 
 **Folie 2 (Ausgangssituation & Ziel):** Problem in eigenen Worten (nicht ablesen): großes
@@ -328,5 +334,5 @@ wiederholen: *„Wir sind nahe am irreduziblen Rauschen — der letzte Sprung ka
 Entscheidung, nicht aus mehr Modellkomplexität; komplexere Modelle allein scheitern nachweislich."*
 
 **Folie 8 (Fazit):** die Botschaft in einem Satz: *„Ein regularisiertes Bias-Modell trägt den
-Großteil, die Gewinne kommen aus einem weichen Content-Signal und der MAE-optimalen
-Sterne-Entscheidung pro Kunde-Produkt-Paar — nicht aus mehr Modellkomplexität."*
+Großteil, die Gewinne kommen aus einem weichen Content-Signal, der Kategorie-/Marken-Affinität und
+der MAE-optimalen Sterne-Entscheidung pro Kunde-Produkt-Paar — nicht aus mehr Modellkomplexität."*

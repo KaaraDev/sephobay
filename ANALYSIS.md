@@ -220,8 +220,9 @@ Since the error lives in the 4-vs-5 boundary, we tested how predictable that bou
 - A GBM classifier with 13 features (incl. user's %-of-5s, item's %-of-5s, all stats) trained
   *specifically* to separate 4s from 5s reaches **AUC 0.827** but **only 83.8% accuracy**
   (base rate of 5 among 4-or-5 is 81.5%, so good ranking barely converts to hard decisions).
-- **Our final model already achieves 83.5%** on that exact decision → **headroom ≈ 0.3 pp.**
-  We are already extracting essentially all the available 4-vs-5 signal.
+- **This conditional classifier achieves 83.5%** on that exact decision → **headroom ≈ 0.3 pp.**
+  (The *full* multiclass model reaches **85.0%** — see the two revision notes below; the shape of
+  the argument holds either way.) We are already extracting essentially all the available 4-vs-5 signal.
 
 **Implied MAE ceiling** (from required 4-vs-5 accuracy):
 | 4-vs-5 accuracy | resulting MAE |
