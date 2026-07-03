@@ -2,13 +2,13 @@
 
 *Big Data Analytics – Methoden und Anwendungen · Group Project · Universität Ulm*
 
-**Last updated: 02.07.2026**
+**Last updated: 03.07.2026**
 
 A recommender system that predicts how a user would rate a SephoBay product, optimized for
 the competition metric: **Mean Absolute Error (MAE) in stars, after rounding to whole stars.**
 
-> **Update 02.07.2026 — new best model (v4):** a multiclass GBM stacked on v2's signals with
-> an MAE-optimal per-row decode reaches **test MAE 0.275** (v2: 0.29). See §5g and
+> **Update 03.07.2026 — new best model (v5):** v4 plus user×category / user×brand affinity
+> features reaches **test MAE 0.265** (v4: 0.275, v2: 0.29). See §5h and
 > [`ANALYSIS.md`](ANALYSIS.md) §9 for the verification.
 
 ---
@@ -136,6 +136,18 @@ three end-to-end holdout simulations that never touch the test set (v4 wins all 
 Earlier GBM attempts failed (0.33+) because they regressed-then-rounded on a single split;
 the OOF stacking + distribution + optimal decode is what makes the family work.
 
+### (h) v5 — user×category / user×brand affinity features *(the final model, 03.07.2026)*
+
+v4 saw "how does this user rate this *kind* of product" only indirectly, through the content
+corrector's k=5 similar-item neighbors — a lossy channel. v5 feeds it to the GBM directly:
+the user's mean rating and (log) rating count within the target item's **tertiary category**
+and **brand** (4 features, computed inside the OOF folds exactly like the existing user/item
+stats, so leak-free by construction), plus a small train/serve count-scale correction. On the
+test set 89.7% of pairs have same-category history and 76.4% same-brand history, so the
+features are almost always active. Result: **test MAE 0.265** (v4: 0.275); the gain
+replicates on OOF across three independent fold seeds (0.2964 → 0.2870 on the primary seed)
+and the paired bootstrap vs v4 excludes zero.
+
 ## 6. Results
 
 | Model | test MAE |
@@ -144,64 +156,73 @@ the OOF stacking + distribution + optimal decode is what makes the family work.
 | Regularized bias backbone | 0.325 |
 | + content + blend | 0.305 |
 | + tuned threshold (v2 final) | 0.29 |
-| **v4: stacked GBM + optimal decode (final)** | **0.275** |
+| v4: stacked GBM + optimal decode | 0.275 |
+| **v5: + user×category/brand affinity (final)** | **0.265** |
 
 The results generalize: for v2, validation (0.303), per-user validation (0.307) and test
 (0.29) agree; for v4, the OOF estimate (0.297), three holdout simulations, and test (0.275)
-all show the same ~0.015–0.02 advantage over v2.
+all show the same ~0.015–0.02 advantage over v2; for v5, the OOF estimate improves by the
+same ~0.009 as the test score (0.2964 → 0.2870 OOF, 0.275 → 0.265 test), on three fold seeds.
 
 > **Note:** these numbers are measured on the *student* test set. The graded evaluation set is
 > held back by the instructors, and every model scores somewhat better on this test sample
-> than on validation — so quote the *gap* ("v4 ≈ 0.015–0.02 better than v2"), not 0.275, as
-> the guaranteed part.
+> than on validation — so quote the *gaps* ("v4 ≈ 0.015–0.02 better than v2, v5 ≈ 0.01 better
+> than v4"), not 0.265, as the guaranteed part.
 
-## 7. How far can it go? (we checked — then revised once)
+## 7. How far can it go? (we checked — then revised twice)
 
 We stress-tested v2 against **nine model families** — matrix factorization (SVD), gradient
 boosting (incl. quantile loss), neural networks (MLP), clustering / co-clustering, a two-stage
 classifier, and more. In their original regress-then-round form, **none beat ~0.29**. The one
 that eventually did (v4) changed the *setup*, not the family: out-of-fold feature stacking +
 full probability distribution + per-row optimal decode. About **60% of v2's remaining error
-was the 4-vs-5 boundary**; v4 pushes that boundary's accuracy from 82.8% to 85.0%, close to
-what the data supports. **~0.275 is the practical floor**; reaching ~0.20 would require
-information that is not in the data. Full experiment log in [`ANALYSIS.md`](ANALYSIS.md)
-(the v4 verification is §9).
+was the 4-vs-5 boundary**; v4 pushes that boundary's accuracy from 82.8% to 85.0%. We have
+now revised our floor estimate twice — v4's decode moved it from ~0.285 to ~0.275, and v5's
+affinity features to **~0.265** — so "floor" claims deserve some humility, but each revision
+came from feeding the model *existing* information through a better channel, not from new
+information. Reaching ~0.20 would require ≥90% 4-vs-5 accuracy, i.e. information that is not
+in the data. Full experiment log in [`ANALYSIS.md`](ANALYSIS.md) (the v4/v5 verification
+is §9).
 
-## 8. v2 vs v3 vs v4
+## 8. v2 vs v3 vs v4 vs v5
 
 | System | random val / OOF | per-user val | test MAE |
 |---|---|---|---|
-| **v4** (stacked GBM + optimal decode, final) | 0.297 (OOF) | — | **0.275** |
+| **v5** (v4 + user×category/brand affinity, final) | 0.287 (OOF) | — | **0.265** |
+| v4 (stacked GBM + optimal decode) | 0.297 (OOF) | — | 0.275 |
 | v2 (bias + extensions) | 0.30 | 0.31 | 0.29 |
 | v3 (course methods only: CF + content) | 0.33 | 0.32 | 0.31 |
 
 ## 9. Takeaway
 
 > A regularized bias model gets you most of the way; a **soft, personalized content signal**
-> and **aligning the rounding decision with the lopsided metric** get you to 0.29 (v2). The
-> last step (v4, 0.275) comes from making that decision **per row instead of globally**:
-> predict a full rating distribution and pick the star with minimal expected error. Hard
-> low-rating classifiers and regress-then-round complex models remain dead ends — we tested
-> and ruled them out.
+> and **aligning the rounding decision with the lopsided metric** get you to 0.29 (v2).
+> v4 (0.275) makes that decision **per row instead of globally**: predict a full rating
+> distribution and pick the star with minimal expected error. v5 (0.265) then hands the model
+> the one signal it was reconstructing indirectly — **how this user rates this category and
+> this brand** — as direct features. Hard low-rating classifiers and regress-then-round
+> complex models remain dead ends — we tested and ruled them out.
 
 ## Repository contents
 
 | File | Description |
 |---|---|
-| `SephoBay_Recommender_v4_gbm.py` / `SephoBay_Recommender_v4.ipynb` | **Final solution (v4)**: multiclass GBM on OOF-stacked v2 features + MAE-optimal decode. |
-| `SephoBay_Recommender_v2.ipynb` | v2: regularized bias backbone + content (incl. TF-IDF) + blend + tuned threshold. Supplies v4's features. |
+| `SephoBay_Recommender_v5_gbm.py` / `SephoBay_Recommender_v5.ipynb` | **Final solution (v5)**: v4 + user×category/brand affinity features + count-scale fix. |
+| `SephoBay_Recommender_v4_gbm.py` / `SephoBay_Recommender_v4.ipynb` | v4: multiclass GBM on OOF-stacked v2 features + MAE-optimal decode. |
+| `SephoBay_Recommender_v2.ipynb` | v2: regularized bias backbone + content (incl. TF-IDF) + blend + tuned threshold. Supplies v4/v5's features. |
 | `SephoBay_Recommender_v3.ipynb` | Course-methods-only variant (CF + content, no bias model) for comparison. |
 | `SephoBay_Praesentation.pptx` | Presentation for the Vorstand (German, 8 slides). |
-| `ANALYSIS.md` | Full dataset analysis & experiment log (all tested-and-rejected approaches, the floor argument, v4 verification in §9). |
+| `ANALYSIS.md` | Full dataset analysis & experiment log (all tested-and-rejected approaches, the floor argument, v4/v5 verification in §9). |
+| `HANDOFF_V5.md` | Audit of the v4 pipeline + the measured evidence behind v5's changes. |
 | `SephoBay_Coding_Plan.md` | Design plan behind v2. |
 | `SephoBay_Coding_Plan_CourseBased.md` | Design plan behind v3. |
-| `predictions.csv` / `predictions_v3.csv` / `predictions_v4.csv` | Final integer test predictions (v2 / v3 / v4). |
+| `predictions.csv` / `predictions_v3.csv` / `predictions_v4.csv` / `predictions_v5.csv` | Final integer test predictions (v2 / v3 / v4 / v5). |
 | `data/` | Input CSVs. |
 
 ## How to run
 
 ```bash
 pip install numpy pandas scikit-learn
-python SephoBay_Recommender_v4_gbm.py            # final model → predictions_v4.csv + MAE (~20 s)
+python SephoBay_Recommender_v5_gbm.py            # final model → predictions_v5.csv + MAE (~20 s)
 jupyter notebook SephoBay_Recommender_v2.ipynb   # v2: Run All → predictions.csv + MAE
 ```

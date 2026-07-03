@@ -1,7 +1,7 @@
 # SephoBay — Dataset Analysis & Experiment Log
 
 *Big Data Analytics · Universität Ulm · Group Project*
-**Compiled: 15.06.2026 · Updated: 02.07.2026 (v4 result, §9)**
+**Compiled: 15.06.2026 · Updated: 03.07.2026 (v5 result, §9)**
 
 A complete record of what we learned about the SephoBay dataset and every model/idea we
 tested — including the ones that **failed**, which are as informative as the ones that worked.
@@ -11,6 +11,10 @@ Companion to [`README.md`](README.md) (project overview) and the two notebooks.
 > **beat v2** — test MAE **0.275 vs 0.2895**, confirmed by paired bootstrap and holdout
 > simulations. Sections 4, 5 and 7 below are kept as originally written (they document what
 > we believed and why), with inline corrections pointing to §9 where a claim has been revised.
+>
+> **Update 03.07.2026:** adding **user×category and user×brand affinity features** to the v4
+> stack (**v5**, §9 end) beat v4 — test MAE **0.2645 vs 0.2750**, with the gain replicated on
+> OOF across three fold seeds and a paired bootstrap vs v4 excluding zero.
 
 ---
 
@@ -69,8 +73,8 @@ Implications of the 76%-fives distribution:
 1. **A trivial baseline is already strong.** "Always predict 5" scores **MAE ≈ 0.37**.
 2. **Fine-grained accuracy is mostly irrelevant.** 4.6 and 4.9 both round to 5. The problem is
    not regression accuracy — it is a **decision boundary: when do you deviate from 5?**
-3. **The realistic competitive band is narrow:** ~0.37 (guess 5) down to ~0.29 (v2; the final
-   v4 of §9 reaches ~0.275). Note the sampling noise: MAE on ~3,000 test rows has a standard
+3. **The realistic competitive band is narrow:** ~0.37 (guess 5) down to ~0.29 (v2; v4 of §9
+   reaches ~0.275, the final v5 ~0.265). Note the sampling noise: MAE on ~3,000 test rows has a standard
    error of ~0.011 (95% band ±0.022), so a true-~0.27 model can legitimately show ~0.25 on a
    different 10% sample. Only values *well below* that band (≲0.23) are a red flag for
    methodology errors (continuous MAE, leakage, or scoring a subset).
@@ -144,10 +148,11 @@ Notes on the last two (the most-requested "smarter" architectures):
 | Content weighted-mean (creative step) | 0.334 | — | — |
 | Convex blend (final v3) | 0.330 | 0.319 | **0.3126** |
 
-### v4: stacked multiclass GBM + L1-optimal decode (new best, 02.07.2026 — details in §9)
+### v4/v5: stacked multiclass GBM + L1-optimal decode (the winning line, 02–03.07.2026 — details in §9)
 | Model | OOF estimate | test |
 |---|---|---|
-| Multiclass GBM on OOF-stacked v2 features, expected-cost decode (5-seed ensemble) | 0.2966 | **0.2750** |
+| v4: multiclass GBM on OOF-stacked v2 features, expected-cost decode (5-seed ensemble) | 0.2966 | 0.2750 |
+| v5: + user×category/brand affinity features + count-scale fix (new best, 03.07.2026) | 0.2870 | **0.2645** |
 
 ---
 
@@ -208,7 +213,7 @@ Confusion of the final v2 model on the test set (rows = TRUE, columns = PREDICTE
 
 ---
 
-## 7. The ceiling — why ~0.285 is the floor and 0.20 is unreachable *(revised by §9: the practical floor is ~0.275, not ~0.285; 0.20 remains unreachable)*
+## 7. The ceiling — why ~0.285 is the floor and 0.20 is unreachable *(revised twice by §9: v4 moved the practical floor to ~0.275, v5 to ~0.265; 0.20 remains unreachable)*
 
 Since the error lives in the 4-vs-5 boundary, we tested how predictable that boundary is:
 
@@ -234,33 +239,43 @@ not a modelling gap.
 
 **Revised 02.07.2026 (see §9):** the "~84% cap" was estimated from a classifier trained *only
 on 4-or-5 rows*; a multiclass model trained on all ratings (sharing strength across classes)
-reaches **85.0%** 4-vs-5 accuracy on test, which is exactly the v2→v4 gain
+reaches **85.0%** 4-vs-5 accuracy on test, which is exactly the v2→v4 gap
 (0.2895 → 0.2750). The *shape* of the argument stands — per the table above, ~85% accuracy
-corresponds to ~0.27 MAE, and 0.20 would still need ≥90%, which remains out of reach — but
-the practical floor is **~0.275**, not ~0.285.
+corresponds to ~0.27 MAE, and 0.20 would still need ≥90%, which remains out of reach.
+
+**Revised again 03.07.2026 (see §9 end):** v5's user×category/brand affinity features cut
+test MAE to **0.2645** (OOF 0.2964 → 0.2870), so the floor moved a second time, to
+**~0.265**. Both revisions came from routing *existing* information to the model through a
+better channel (per-row decode; direct group-affinity features), not from new information —
+the honest reading is that "the floor" is where our best channel currently saturates, while
+the 0.20 bound (which would need ≥90% 4-vs-5 accuracy) is data-limited and stands.
 
 ---
 
-## 8. Practical conclusions *(updated 02.07.2026)*
+## 8. Practical conclusions *(updated 03.07.2026)*
 
-- **Final model (v4, §9):** multiclass GBM on out-of-fold-stacked v2 features + L1-optimal
-  decode → **test MAE 0.275** (OOF estimate 0.297). Previous best (v2): 0.2895.
+- **Final model (v5, §9 end):** v4's multiclass GBM on out-of-fold-stacked v2 features +
+  L1-optimal decode, plus **user×category / user×brand affinity features** and a train/serve
+  count-scale fix → **test MAE 0.2645** (OOF estimate 0.287). Previous bests: v4 0.2750,
+  v2 0.2895.
 - **It generalises:** the v2→v4 gap (~0.015–0.02 MAE) shows up on OOF, on three independent
-  end-to-end holdout simulations, and on the test set; the paired-bootstrap 95% CI of the
-  improvement excludes zero.
+  end-to-end holdout simulations, and on the test set; the v4→v5 gap (~0.009 MAE) shows up
+  on OOF across three fold seeds and on the test set, with paired-bootstrap 95% CIs of both
+  improvements excluding zero.
 - **v2 remains the best simple/interpretable model** (bias + content + tuned threshold, 0.29)
-  and supplies v4's most important features.
-- **v4 is near the (revised) practical floor** of ~0.275 for this metric and dataset.
+  and supplies v4/v5's most important features.
+- **v5 is near the (twice-revised) practical floor** of ~0.265 for this metric and dataset.
 - **Treat reported MAEs with sampling noise in mind:** the SE on a ~3,000-row test sample is
-  ~0.011, so scores down to ~0.25 are compatible with a true-~0.27 model plus sample luck.
-  Values well below that (≲0.23) warrant a methodology check first (un-rounded scoring, data
-  leakage, subset evaluation) — though our own floor estimate has been revised downward once
+  ~0.011, so scores down to ~0.24 are compatible with a true-~0.26 model plus sample luck.
+  Values well below that (≲0.22) warrant a methodology check first (un-rounded scoring, data
+  leakage, subset evaluation) — though our own floor estimate has been revised downward twice
   already (§9), so skepticism should cut both ways.
 
 ### Reproducibility
 ```bash
 pip install numpy pandas scikit-learn
 jupyter notebook SephoBay_Recommender_v2.ipynb   # Run All → regenerates predictions.csv + MAE
+python SephoBay_Recommender_v5_gbm.py            # regenerates predictions_v5.csv + MAE (~20 s)
 python SephoBay_Recommender_v4_gbm.py            # regenerates predictions_v4.csv + MAE (~20 s)
 ```
 
@@ -326,3 +341,50 @@ on the instructors' secret set.
 `SephoBay_Recommender_v4_gbm.py` (also as notebook `SephoBay_Recommender_v4.ipynb`) is
 self-contained: builds OOF features, prints the OOF estimate, writes `predictions_v4.csv`,
 and prints the test MAE. Runtime ~20 s.
+
+### Update 03.07.2026 — v5: user×category + user×brand affinity features beat v4
+
+A pre-submission audit of the v4 pipeline (full log in [`HANDOFF_V5.md`](HANDOFF_V5.md))
+confirmed it leak-free and its decode provably L1-optimal (per-boundary threshold tuning:
+OOF gain ≈ 0.0002, *negative* out-of-sample — there is nothing left there), but found one
+real gap: the GBM saw group-level preference ("how does this user rate this *kind* of
+product") only through `content_resid`'s k=5 similarity-weighted neighbors — a lossy channel.
+
+**v5** (`SephoBay_Recommender_v5_gbm.py` / `.ipynb`) adds 4 direct features: the user's mean
+rating and log1p rating count within the target item's **tertiary_category** (22 values) and
+**brand_name** (86 values). The group stats are computed from the fold's training data inside
+`component_frame`, exactly like the existing `umean`/`upct5`, so they are leak-free by
+construction; unseen (user, group) pairs fall back to the fold's global mean / count 0. On
+the test set the features are almost always active: 89.7% of pairs have same-category
+history, 76.4% same-brand. v5 also fixes a train/serve count-scale shift found by the audit
+(the classifier trained on log-counts from 80%-data folds but served 100%-data counts,
+a ≈ log(5/4) shift; counts are now rescaled to full-data equivalents before `log1p`).
+
+| Check | v4 | v5 (affinity) | v5 (affinity + count-scale fix, final) |
+|---|---|---|---|
+| OOF MAE, fold seed 42 | 0.2964 | 0.2870 | 0.2870 |
+| OOF MAE, fold seed 7 | 0.2974 | 0.2903 | — |
+| OOF MAE, fold seed 123 | 0.2977 | 0.2857 | — |
+| Test MAE | 0.2750 | 0.2652 | **0.2645** |
+
+The affinity gain replicates on OOF (which never touches the test set) across three
+independent fold seeds, and the paired bootstrap vs `predictions_v4.csv` (10k resamples)
+gives +0.0105 with 95% CI [+0.0010, +0.0201] — excludes zero. The count-scale fix on top was
+verified to leave OOF unchanged (as expected: it only aligns the serve-time feature scale)
+and is kept as the strictly-correct variant.
+
+Tested and rejected (on OOF only, test set untouched): **shrunken affinity means**
+`(sum + λ·g)/(count + λ)` for λ ∈ {2, 3, 5} score OOF 0.2875–0.2876 vs 0.2870 for raw
+means — slightly worse; the GBM already sees the log-counts next to the means and applies
+its own implicit shrinkage.
+
+**Caveat, sharpened:** by this point the student test set has been evaluated 20+ times across
+the project, so its point estimates are partly spent as evidence. The durable claim is the
+OOF gap (**0.2964 → 0.2870, ~0.009 MAE, three fold seeds**); expect the instructors' secret
+set to land nearer 0.26–0.28 than exactly 0.2645. All decisions in v5 (feature set, fallbacks,
+keeping the count-scale fix) were made on OOF only.
+
+### Reproducibility (v5)
+`SephoBay_Recommender_v5_gbm.py` (also as notebook `SephoBay_Recommender_v5.ipynb`) is
+self-contained: builds OOF features, prints the OOF estimate (0.2870), writes
+`predictions_v5.csv`, and prints the test MAE (0.2645). Runtime ~20 s.
